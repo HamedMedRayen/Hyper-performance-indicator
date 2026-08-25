@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { X, Camera, ShieldCheck, Video, VideoOff, Upload, Layers, Flame, Check, RefreshCw, Clock, Sunrise, Sun, Moon, Cookie } from "lucide-react";
+import { X, Camera, ShieldCheck, Video, VideoOff, Upload, Layers, Flame, Check, RefreshCw, Clock, Sunrise, Sun, Moon, Cookie, Sparkles } from "lucide-react";
 import { api } from "../../utils/api";
 import { useToast } from "../common/Toast";
 
@@ -210,6 +210,17 @@ export default function MealScanModal({ onClose, onLog }) {
     }
   };
 
+  const isResultView = !cameraActive && selectedImage && !scanning && scanResult;
+
+  // Macro ratio calculations for visual bar
+  const pG = scanResult?.totals?.protein_g || 0;
+  const cG = scanResult?.totals?.carbs_g || 0;
+  const fG = scanResult?.totals?.fat_g || 0;
+  const totalMacroCal = (pG * 4) + (cG * 4) + (fG * 9) || 1;
+  const pPct = Math.round(((pG * 4) / totalMacroCal) * 100) || 0;
+  const cPct = Math.round(((cG * 4) / totalMacroCal) * 100) || 0;
+  const fPct = Math.max(0, 100 - pPct - cPct);
+
   return (
     <div className="modal-overlay" style={{
       zIndex: 1000,
@@ -218,44 +229,63 @@ export default function MealScanModal({ onClose, onLog }) {
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      background: "var(--overlay-bg, rgba(0, 0, 0, 0.8))",
-      backdropFilter: "blur(14px)",
-      WebkitBackdropFilter: "blur(14px)"
+      background: "var(--overlay-bg, rgba(0, 0, 0, 0.82))",
+      backdropFilter: "blur(16px)",
+      WebkitBackdropFilter: "blur(16px)",
+      padding: 16
     }}>
       <div className="card modal-content" style={{
-        maxWidth: 460,
-        width: "92%",
-        maxHeight: "88vh",
+        maxWidth: isResultView ? 920 : 480,
+        width: "100%",
+        maxHeight: "90vh",
         overflowY: "auto",
-        borderRadius: 22,
-        border: "1px solid var(--border-card)",
-        background: "var(--bg-card)",
-        padding: 18,
-        boxShadow: "var(--shadow-raise)"
+        borderRadius: 24,
+        border: "1px solid var(--border-card, rgba(255,255,255,0.1))",
+        background: "var(--bg-card, #0f172a)",
+        padding: isResultView ? "20px 24px" : "20px",
+        boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 40px rgba(0, 242, 254, 0.08)",
+        transition: "max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease"
       }}>
 
         {/* Modal Top Header Bar */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{
-              width: 34, height: 34, borderRadius: 10,
-              background: "color-mix(in srgb, var(--aura-accent) 15%, transparent)",
-              border: "1px solid var(--color-border)",
-              display: "flex", justifyContent: "center", alignItems: "center", color: "var(--aura-accent)"
+              width: 38, height: 38, borderRadius: 12,
+              background: "linear-gradient(135deg, rgba(0, 242, 254, 0.2) 0%, rgba(186, 85, 211, 0.2) 100%)",
+              border: "1px solid rgba(0, 242, 254, 0.4)",
+              display: "flex", justifyContent: "center", alignItems: "center", color: "#00f2fe",
+              boxShadow: "0 0 15px rgba(0, 242, 254, 0.2)"
             }}>
-              <Camera size={18} />
+              <Camera size={20} />
             </div>
             <div>
-              <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "var(--color-text)", letterSpacing: "-0.3px" }}>
+              <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: "var(--color-text, #fff)", letterSpacing: "-0.3px" }}>
                 AI Photo Meal Scanner
               </h2>
-              <div style={{ fontSize: 11, color: "var(--color-text-3)", marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}>
-                <ShieldCheck size={12} color="var(--aura-accent)" /> AI Nutrition Vision Analysis
+              <div style={{ fontSize: 11.5, color: "var(--color-text-3, #94a3b8)", marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}>
+                <ShieldCheck size={13} color="#00f2fe" /> AI Nutrition Vision Analysis
               </div>
             </div>
           </div>
-          <button onClick={() => { stopCamera(); onClose(); }} style={{ background: "none", border: "none", color: "var(--color-text-3)", cursor: "pointer", padding: 4 }}>
-            <X size={22} />
+          <button
+            onClick={() => { stopCamera(); onClose(); }}
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 10,
+              color: "var(--color-text-3, #94a3b8)",
+              cursor: "pointer",
+              padding: "6px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s ease"
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "var(--color-text-3, #94a3b8)"; }}
+          >
+            <X size={18} />
           </button>
         </div>
 
@@ -263,36 +293,38 @@ export default function MealScanModal({ onClose, onLog }) {
         {cameraActive && (
           <div style={{ position: "relative", marginBottom: 16 }}>
             <div style={{
-              position: "relative", borderRadius: 16, overflow: "hidden",
-              border: "2px solid #00f2fe", maxHeight: 260, background: "#000",
-              display: "flex", justifyContent: "center", alignItems: "center"
+              position: "relative", borderRadius: 18, overflow: "hidden",
+              border: "2px solid #00f2fe", maxHeight: 280, background: "#000",
+              display: "flex", justifyContent: "center", alignItems: "center",
+              boxShadow: "0 0 30px rgba(0, 242, 254, 0.25)"
             }}>
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
-                style={{ width: "100%", height: "100%", objectFit: "cover", maxHeight: 260 }}
+                style={{ width: "100%", height: "100%", objectFit: "cover", maxHeight: 280 }}
               />
 
               <div style={{
-                position: "absolute", inset: 20, border: "2px dashed rgba(0, 242, 254, 0.6)",
-                borderRadius: 12, pointerEvents: "none", display: "flex", justifyContent: "center", alignItems: "center"
+                position: "absolute", inset: 20, border: "2px dashed rgba(0, 242, 254, 0.7)",
+                borderRadius: 14, pointerEvents: "none", display: "flex", justifyContent: "center", alignItems: "center"
               }}>
-                <span style={{ fontSize: 11, color: "#00f2fe", background: "rgba(0,0,0,0.6)", padding: "4px 8px", borderRadius: 6, fontWeight: 700 }}>
+                <span style={{ fontSize: 11.5, color: "#00f2fe", background: "rgba(0,0,0,0.75)", padding: "5px 10px", borderRadius: 8, fontWeight: 700, backdropFilter: "blur(4px)" }}>
                   Center meal in camera viewfinder
                 </span>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
               <button
                 onClick={stopCamera}
                 style={{
                   flex: 1, padding: "12px", borderRadius: 12,
                   background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)",
-                  color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer",
-                  display: "flex", justifyContent: "center", alignItems: "center", gap: 6
+                  color: "#fff", fontWeight: 700, fontSize: 12.5, cursor: "pointer",
+                  display: "flex", justifyContent: "center", alignItems: "center", gap: 6,
+                  transition: "all 0.2s"
                 }}
               >
                 <VideoOff size={15} /> Cancel Camera
@@ -301,13 +333,13 @@ export default function MealScanModal({ onClose, onLog }) {
                 onClick={capturePhoto}
                 style={{
                   flex: 2, padding: "12px", borderRadius: 12,
-                  background: "var(--aura-accent)",
-                  border: "none", color: "var(--color-on-accent)", fontWeight: 800, fontSize: 13,
+                  background: "var(--aura-accent, #00f2fe)",
+                  border: "none", color: "var(--color-on-accent, #000)", fontWeight: 800, fontSize: 13,
                   cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 8,
-                  boxShadow: "0 4px 15px color-mix(in srgb, var(--aura-accent) 30%, transparent)"
+                  boxShadow: "0 4px 20px color-mix(in srgb, var(--aura-accent, #00f2fe) 40%, transparent)"
                 }}
               >
-                <Camera size={18} /> Snap Photo & Run AI Vision Scan
+                <Camera size={18} /> Snap Photo & Run Scan
               </button>
             </div>
           </div>
@@ -315,33 +347,37 @@ export default function MealScanModal({ onClose, onLog }) {
 
         {/* Initial Selection & Upload Options */}
         {!cameraActive && !selectedImage && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 8 }}>
             <button
               onClick={startCamera}
               style={{
-                width: "100%", padding: "20px", borderRadius: 16,
-                background: "color-mix(in srgb, var(--aura-accent) 12%, var(--bg-card))",
-                border: "2px solid var(--aura-accent)", color: "var(--color-text)", cursor: "pointer",
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
-                transition: "all 0.2s ease"
+                width: "100%", padding: "24px 20px", borderRadius: 18,
+                background: "linear-gradient(135deg, rgba(0, 242, 254, 0.12) 0%, rgba(186, 85, 211, 0.08) 100%)",
+                border: "2px solid rgba(0, 242, 254, 0.4)", color: "var(--color-text, #fff)", cursor: "pointer",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+                transition: "all 0.25s ease",
+                boxShadow: "0 8px 24px rgba(0, 242, 254, 0.1)"
               }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#00f2fe"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(0, 242, 254, 0.4)"; e.currentTarget.style.transform = "none"; }}
             >
               <div style={{
-                width: 52, height: 52, borderRadius: "50%",
-                background: "var(--aura-accent)",
-                display: "flex", justifyContent: "center", alignItems: "center", color: "var(--color-on-accent)"
+                width: 56, height: 56, borderRadius: "50%",
+                background: "linear-gradient(135deg, #00f2fe 0%, #ba55d3 100%)",
+                display: "flex", justifyContent: "center", alignItems: "center", color: "#000",
+                boxShadow: "0 4px 20px rgba(0, 242, 254, 0.4)"
               }}>
-                <Camera size={26} />
+                <Camera size={28} />
               </div>
-              <span style={{ fontSize: 16, fontWeight: 800, color: "var(--color-text)" }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: "#fff", letterSpacing: "-0.2px" }}>
                 Open Live Vision Camera
               </span>
-              <span style={{ fontSize: 12, color: "var(--color-text-2)" }}>
-                Point camera at meal & snap photo for instant AI analysis
+              <span style={{ fontSize: 12.5, color: "#94a3b8", textAlign: "center", maxWidth: 300 }}>
+                Point camera at meal & snap photo for instant AI food and calorie breakdown
               </span>
             </button>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <input
                 type="file"
                 ref={cameraInputRef}
@@ -353,11 +389,14 @@ export default function MealScanModal({ onClose, onLog }) {
               <button
                 onClick={() => cameraInputRef.current && cameraInputRef.current.click()}
                 style={{
-                  padding: "14px", borderRadius: 12,
+                  padding: "14px", borderRadius: 14,
                   background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
-                  color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer",
-                  display: "flex", justifyContent: "center", alignItems: "center", gap: 6
+                  color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                  display: "flex", justifyContent: "center", alignItems: "center", gap: 8,
+                  transition: "all 0.2s ease"
                 }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
               >
                 <Video size={16} color="#00f2fe" /> Device Camera
               </button>
@@ -374,11 +413,14 @@ export default function MealScanModal({ onClose, onLog }) {
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 style={{
-                  padding: "14px", borderRadius: 12,
+                  padding: "14px", borderRadius: 14,
                   background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
-                  color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer",
-                  display: "flex", justifyContent: "center", alignItems: "center", gap: 6
+                  color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                  display: "flex", justifyContent: "center", alignItems: "center", gap: 8,
+                  transition: "all 0.2s ease"
                 }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
               >
                 <Upload size={16} color="#ba55d3" /> Upload Photo
               </button>
@@ -388,237 +430,335 @@ export default function MealScanModal({ onClose, onLog }) {
 
         {/* Selected Image & Scanning Loading State */}
         {!cameraActive && selectedImage && scanning && (
-          <div style={{ position: "relative", marginBottom: 16 }}>
+          <div style={{ position: "relative", margin: "10px 0 16px" }}>
             <div style={{
-              position: "relative", borderRadius: 16, overflow: "hidden",
-              border: "1px solid rgba(255,255,255,0.15)", height: 210,
-              background: "#000", display: "flex", justifyContent: "center", alignItems: "center"
+              position: "relative", borderRadius: 18, overflow: "hidden",
+              border: "1px solid rgba(0, 242, 254, 0.4)", height: 230,
+              background: "#000", display: "flex", justifyContent: "center", alignItems: "center",
+              boxShadow: "0 0 30px rgba(0, 242, 254, 0.15)"
             }}>
               <img
                 src={selectedImage}
                 alt="Meal to scan"
-                style={{ width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.6)" }}
+                style={{ width: "100%", height: "100%", objectFit: "cover", filter: "brightness(0.4) blur(2px)" }}
               />
 
               <div style={{
                 position: "absolute", inset: 0,
-                background: "linear-gradient(180deg, rgba(0,242,254,0.15) 0%, rgba(186,85,211,0.2) 100%)",
-                display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 12
+                background: "radial-gradient(ellipse at center, rgba(0,242,254,0.15) 0%, rgba(186,85,211,0.25) 100%)",
+                display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 14
               }}>
                 <div style={{
-                  width: 44, height: 44, borderRadius: "50%",
-                  border: "3px solid transparent", borderTopColor: "#00f2fe", borderRightColor: "#ba55d3",
+                  width: 48, height: 48, borderRadius: "50%",
+                  border: "3px solid rgba(255,255,255,0.1)", borderTopColor: "#00f2fe", borderRightColor: "#ba55d3",
                   animation: "spin 1s linear infinite"
                 }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>
-                  Analyzing Meal Components with AI...
-                </span>
+                <div style={{ textAlign: "center" }}>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: "#fff", textShadow: "0 2px 8px rgba(0,0,0,0.9)", display: "block" }}>
+                    Analyzing Meal Components with AI...
+                  </span>
+                  <span style={{ fontSize: 11.5, color: "#00f2fe", marginTop: 4, display: "block", fontWeight: 600 }}>
+                    Detecting ingredients, portion sizes & macros
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Scan Results View - EXACT FORMAT MATCHING SCREENSHOT */}
-        {!cameraActive && selectedImage && !scanning && scanResult && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* HORIZONTAL SCAN RESULTS VIEW (Side-by-Side on Desktop/Tablet, Responsive Stack on Mobile) */}
+        {isResultView && (
+          <div className="meal-scan-horizontal-grid">
 
-            {/* Top Image Container with Change Image button */}
-            <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", height: 200 }}>
-              <img
-                src={selectedImage}
-                alt={scanResult.meal_name || "Scanned meal"}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-              <button
-                onClick={() => { setSelectedImage(null); setScanResult(null); startCamera(); }}
-                style={{
-                  position: "absolute", top: 12, right: 12,
-                  background: "rgba(0, 0, 0, 0.65)",
-                  backdropFilter: "blur(6px)",
-                  border: "1px solid rgba(255, 255, 255, 0.25)",
-                  color: "#fff", borderRadius: 8, padding: "6px 12px",
-                  fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  display: "flex", alignItems: "center", gap: 6,
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.5)"
-                }}
-              >
-                <RefreshCw size={13} /> Change Image
-              </button>
+            {/* ══════════ LEFT COLUMN: Visual Showcase & Nutritional Macros Summary ══════════ */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+              {/* Photo Showcase with Glassmorphism Overlays */}
+              <div style={{
+                position: "relative",
+                borderRadius: 18,
+                overflow: "hidden",
+                height: 210,
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.4)"
+              }}>
+                <img
+                  src={selectedImage}
+                  alt={scanResult.meal_name || "Scanned meal"}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+
+                {/* Change Image Button */}
+                <button
+                  onClick={() => { setSelectedImage(null); setScanResult(null); startCamera(); }}
+                  style={{
+                    position: "absolute", top: 12, right: 12,
+                    background: "rgba(0, 0, 0, 0.7)",
+                    backdropFilter: "blur(8px)",
+                    border: "1px solid rgba(255, 255, 255, 0.25)",
+                    color: "#fff", borderRadius: 8, padding: "6px 12px",
+                    fontSize: 12, fontWeight: 700, cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 6,
+                    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.6)",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,0.9)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0.7)"; }}
+                >
+                  <RefreshCw size={13} /> Change Image
+                </button>
+              </div>
+
+              {/* Detected Dish Title & Summary Card */}
+              <div style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                borderRadius: 16,
+                padding: "14px 16px",
+                border: "1px solid rgba(255, 255, 255, 0.08)"
+              }}>
+                <div style={{
+                  fontSize: 10.5,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.8px",
+                  color: "#818cf8",
+                  fontWeight: 800,
+                  marginBottom: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#818cf8", display: "inline-block" }} />
+                  DETECTED DISH
+                </div>
+                <h3 style={{ fontSize: 19, fontWeight: 800, color: "#fff", margin: "0 0 6px 0", letterSpacing: "-0.3px" }}>
+                  {scanResult.meal_name}
+                </h3>
+                <p style={{ fontSize: 12.5, color: "rgba(255, 255, 255, 0.7)", margin: 0, lineHeight: "1.45" }}>
+                  {scanResult.description}
+                </p>
+              </div>
+
+              {/* Total Macros & Macro Ratio Segmented Bar */}
+              {scanResult.totals && (
+                <div style={{
+                  background: "linear-gradient(135deg, rgba(0, 242, 254, 0.06) 0%, rgba(186, 85, 211, 0.06) 100%)",
+                  borderRadius: 16,
+                  padding: "14px 16px",
+                  border: "1px solid rgba(0, 242, 254, 0.22)",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.2)"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: "0.6px", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Flame size={15} color="#ff3366" /> TOTAL MACROS
+                    </span>
+                    <span style={{ fontSize: 20, fontWeight: 900, color: "#00f2fe", letterSpacing: "-0.5px" }}>
+                      {Math.round(scanResult.totals.calories || 0)} <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>kcal</span>
+                    </span>
+                  </div>
+
+                  {/* 4-Grid Horizontal Macro Values */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, textAlign: "center", marginBottom: 12 }}>
+                    <div style={{ background: "rgba(0, 0, 0, 0.45)", borderRadius: 10, padding: "8px 4px", border: "1px solid rgba(0, 242, 254, 0.2)" }}>
+                      <div style={{ fontSize: 10, color: "rgba(255, 255, 255, 0.5)", fontWeight: 700, marginBottom: 2 }}>PROTEIN</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#00f2fe" }}>
+                        {Math.round(scanResult.totals.protein_g || 0)}g
+                      </div>
+                    </div>
+                    <div style={{ background: "rgba(0, 0, 0, 0.45)", borderRadius: 10, padding: "8px 4px", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
+                      <div style={{ fontSize: 10, color: "rgba(255, 255, 255, 0.5)", fontWeight: 700, marginBottom: 2 }}>CARBS</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#fbbf24" }}>
+                        {Math.round(scanResult.totals.carbs_g || 0)}g
+                      </div>
+                    </div>
+                    <div style={{ background: "rgba(0, 0, 0, 0.45)", borderRadius: 10, padding: "8px 4px", border: "1px solid rgba(244, 63, 94, 0.2)" }}>
+                      <div style={{ fontSize: 10, color: "rgba(255, 255, 255, 0.5)", fontWeight: 700, marginBottom: 2 }}>FAT</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#f43f5e" }}>
+                        {Math.round(scanResult.totals.fat_g || 0)}g
+                      </div>
+                    </div>
+                    <div style={{ background: "rgba(0, 0, 0, 0.45)", borderRadius: 10, padding: "8px 4px", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                      <div style={{ fontSize: 10, color: "rgba(255, 255, 255, 0.5)", fontWeight: 700, marginBottom: 2 }}>FIBER</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#10b981" }}>
+                        {Math.round(scanResult.totals.fiber_g || 0)}g
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Macro Ratio Progress Bar */}
+                  <div>
+                    <div style={{ height: 6, width: "100%", borderRadius: 6, overflow: "hidden", display: "flex", background: "rgba(255,255,255,0.06)" }}>
+                      <div style={{ width: `${pPct}%`, background: "#00f2fe", transition: "width 0.4s ease" }} title={`Protein ${pPct}%`} />
+                      <div style={{ width: `${cPct}%`, background: "#fbbf24", transition: "width 0.4s ease" }} title={`Carbs ${cPct}%`} />
+                      <div style={{ width: `${fPct}%`, background: "#f43f5e", transition: "width 0.4s ease" }} title={`Fat ${fPct}%`} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>
+                      <span style={{ color: "#00f2fe" }}>● {pPct}% P</span>
+                      <span style={{ color: "#fbbf24" }}>● {cPct}% C</span>
+                      <span style={{ color: "#f43f5e" }}>● {fPct}% F</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Detected Dish Container Card */}
-            <div style={{
-              background: "rgba(255, 255, 255, 0.03)", borderRadius: 14, padding: 14,
-              border: "1px solid rgba(255, 255, 255, 0.08)"
-            }}>
-              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.5px", color: "#6366f1", fontWeight: 800, marginBottom: 4 }}>
-                DETECTED DISH
-              </div>
-              <h3 style={{ fontSize: 19, fontWeight: 800, color: "#fff", margin: "0 0 6px 0", letterSpacing: "-0.3px" }}>
-                {scanResult.meal_name}
-              </h3>
-              <p style={{ fontSize: 12.5, color: "rgba(255, 255, 255, 0.7)", margin: 0, lineHeight: "1.4" }}>
-                {scanResult.description}
-              </p>
-            </div>
+            {/* ══════════ RIGHT COLUMN: Component Breakdown & Logging Controls ══════════ */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
-            {/* Individual Components Breakdown */}
-            {scanResult.components && scanResult.components.length > 0 && (
-              <div>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: "#fff", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                  <Layers size={15} color="#ba55d3" /> Component Breakdown ({scanResult.components.length})
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {scanResult.components.map((comp, idx) => (
-                    <div key={idx} style={{
-                      background: "rgba(255, 255, 255, 0.03)", borderRadius: 12, padding: "10px 14px",
-                      border: "1px solid rgba(255, 255, 255, 0.06)", display: "flex", justifyContent: "space-between", alignItems: "center"
-                    }}>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: 13.5, color: "#fff" }}>
-                          {comp.name} {comp.portion ? <span style={{ fontSize: 11.5, fontWeight: 500, color: "rgba(255, 255, 255, 0.5)", marginLeft: 4 }}>({comp.portion})</span> : null}
-                        </div>
-                        <div style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.5)", marginTop: 3 }}>
-                          P: {Math.round(comp.protein_g || 0)}g • C: {Math.round(comp.carbs_g || 0)}g • F: {Math.round(comp.fat_g || 0)}g
-                        </div>
-                      </div>
-                      <div style={{ fontWeight: 800, fontSize: 14.5, color: "#00f2fe" }}>
-                        {Math.round(comp.calories || 0)} kcal
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              {/* Individual Components Breakdown */}
+              {scanResult.components && scanResult.components.length > 0 && (
+                <div style={{
+                  background: "rgba(255, 255, 255, 0.02)",
+                  borderRadius: 16,
+                  padding: "14px 16px",
+                  border: "1px solid rgba(255, 255, 255, 0.07)"
+                }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: "#fff", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <Layers size={16} color="#ba55d3" /> Component Breakdown
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#ba55d3", background: "rgba(186, 85, 211, 0.15)", padding: "2px 8px", borderRadius: 6 }}>
+                      {scanResult.components.length} ingredients
+                    </span>
+                  </div>
 
-            {/* TOTAL SUM OF MACROS Card */}
-            {scanResult.totals && (
-              <div style={{
-                background: "linear-gradient(135deg, rgba(0, 242, 254, 0.05) 0%, rgba(186, 85, 211, 0.05) 100%)",
-                borderRadius: 14, padding: 14, border: "1px solid rgba(0, 242, 254, 0.18)"
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 800, color: "#fff", textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: 6 }}>
-                    <Flame size={15} color="#ff3366" /> TOTAL SUM OF MACROS
-                  </span>
-                  <span style={{ fontSize: 19, fontWeight: 900, color: "#00f2fe" }}>
-                    {Math.round(scanResult.totals.calories || 0)} kcal
-                  </span>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, textAlign: "center" }}>
-                  <div style={{ background: "rgba(0, 0, 0, 0.4)", borderRadius: 10, padding: "8px 4px", border: "1px solid rgba(255, 255, 255, 0.04)" }}>
-                    <div style={{ fontSize: 10, color: "rgba(255, 255, 255, 0.5)", fontWeight: 700, marginBottom: 3 }}>PROTEIN</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: "#00f2fe" }}>
-                      {Math.round(scanResult.totals.protein_g || 0)}g
-                    </div>
-                  </div>
-                  <div style={{ background: "rgba(0, 0, 0, 0.4)", borderRadius: 10, padding: "8px 4px", border: "1px solid rgba(255, 255, 255, 0.04)" }}>
-                    <div style={{ fontSize: 10, color: "rgba(255, 255, 255, 0.5)", fontWeight: 700, marginBottom: 3 }}>CARBS</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: "#00f2fe" }}>
-                      {Math.round(scanResult.totals.carbs_g || 0)}g
-                    </div>
-                  </div>
-                  <div style={{ background: "rgba(0, 0, 0, 0.4)", borderRadius: 10, padding: "8px 4px", border: "1px solid rgba(255, 255, 255, 0.04)" }}>
-                    <div style={{ fontSize: 10, color: "rgba(255, 255, 255, 0.5)", fontWeight: 700, marginBottom: 3 }}>FAT</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: "#00f2fe" }}>
-                      {Math.round(scanResult.totals.fat_g || 0)}g
-                    </div>
-                  </div>
-                  <div style={{ background: "rgba(0, 0, 0, 0.4)", borderRadius: 10, padding: "8px 4px", border: "1px solid rgba(255, 255, 255, 0.04)" }}>
-                    <div style={{ fontSize: 10, color: "rgba(255, 255, 255, 0.5)", fontWeight: 700, marginBottom: 3 }}>FIBER</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: "#00f2fe" }}>
-                      {Math.round(scanResult.totals.fiber_g || 0)}g
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Mandatory Meal Time Selection */}
-            <div style={{
-              background: "rgba(255, 255, 255, 0.03)",
-              borderRadius: 14,
-              padding: 14,
-              border: "1px solid rgba(255, 255, 255, 0.08)"
-            }}>
-              <div style={{
-                fontSize: 11,
-                fontWeight: 800,
-                color: "#fff",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                marginBottom: 10,
-                display: "flex",
-                alignItems: "center",
-                gap: 6
-              }}>
-                <Clock size={14} color="#00f2fe" /> WHEN DID YOU EAT THIS MEAL? <span style={{ color: "#ff0055" }}>*</span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
-                {MEAL_CATEGORIES.map((cat) => {
-                  const isSelected = selectedCategory === cat.id;
-                  const IconComponent = cat.icon;
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setSelectedCategory(cat.id)}
-                      style={{
-                        padding: "10px 4px",
-                        borderRadius: 10,
-                        border: isSelected ? "2px solid #00f2fe" : "1px solid rgba(255, 255, 255, 0.1)",
-                        background: isSelected
-                          ? "linear-gradient(135deg, rgba(0, 242, 254, 0.25) 0%, rgba(186, 85, 211, 0.25) 100%)"
-                          : "rgba(255, 255, 255, 0.03)",
-                        color: isSelected ? "#00f2fe" : "rgba(255, 255, 255, 0.6)",
-                        fontWeight: isSelected ? 800 : 600,
-                        fontSize: 12,
-                        cursor: "pointer",
+                  {/* Scrollable list for components */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 220, overflowY: "auto", paddingRight: 4 }}>
+                    {scanResult.components.map((comp, idx) => (
+                      <div key={idx} style={{
+                        background: "rgba(255, 255, 255, 0.03)",
+                        borderRadius: 12,
+                        padding: "10px 12px",
+                        border: "1px solid rgba(255, 255, 255, 0.06)",
                         display: "flex",
-                        flexDirection: "column",
+                        justifyContent: "space-between",
                         alignItems: "center",
-                        gap: 6,
-                        transition: "all 0.2s ease",
-                        boxShadow: isSelected ? "0 2px 10px rgba(0, 242, 254, 0.25)" : "none"
-                      }}
-                    >
-                      <IconComponent size={18} color={isSelected ? "#00f2fe" : "rgba(255, 255, 255, 0.5)"} />
-                      <span style={{ color: isSelected ? "#fff" : "rgba(255, 255, 255, 0.7)" }}>{cat.label}</span>
-                    </button>
-                  );
-                })}
+                        transition: "background 0.2s ease"
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
+                          <div style={{ fontWeight: 800, fontSize: 13, color: "#fff", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+                            <span>{comp.name}</span>
+                            {comp.portion && (
+                              <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255, 255, 255, 0.5)", background: "rgba(255,255,255,0.06)", padding: "1px 6px", borderRadius: 4 }}>
+                                {comp.portion}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.5)", marginTop: 3 }}>
+                            P: {Math.round(comp.protein_g || 0)}g • C: {Math.round(comp.carbs_g || 0)}g • F: {Math.round(comp.fat_g || 0)}g
+                          </div>
+                        </div>
+                        <div style={{
+                          fontWeight: 800,
+                          fontSize: 13.5,
+                          color: "#00f2fe",
+                          background: "rgba(0, 242, 254, 0.08)",
+                          border: "1px solid rgba(0, 242, 254, 0.2)",
+                          padding: "4px 8px",
+                          borderRadius: 8,
+                          whiteSpace: "nowrap"
+                        }}>
+                          {Math.round(comp.calories || 0)} kcal
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Mandatory Meal Time Selection */}
+              <div style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                borderRadius: 16,
+                padding: "14px 16px",
+                border: "1px solid rgba(255, 255, 255, 0.08)"
+              }}>
+                <div style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: "#fff",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.6px",
+                  marginBottom: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6
+                }}>
+                  <Clock size={14} color="#00f2fe" /> WHEN DID YOU EAT THIS MEAL? <span style={{ color: "#ff0055" }}>*</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+                  {MEAL_CATEGORIES.map((cat) => {
+                    const isSelected = selectedCategory === cat.id;
+                    const IconComponent = cat.icon;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setSelectedCategory(cat.id)}
+                        style={{
+                          padding: "10px 4px",
+                          borderRadius: 12,
+                          border: isSelected ? "2px solid #00f2fe" : "1px solid rgba(255, 255, 255, 0.1)",
+                          background: isSelected
+                            ? "linear-gradient(135deg, rgba(0, 242, 254, 0.25) 0%, rgba(186, 85, 211, 0.25) 100%)"
+                            : "rgba(255, 255, 255, 0.03)",
+                          color: isSelected ? "#00f2fe" : "rgba(255, 255, 255, 0.6)",
+                          fontWeight: isSelected ? 800 : 600,
+                          fontSize: 12,
+                          cursor: "pointer",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 6,
+                          transition: "all 0.2s ease",
+                          boxShadow: isSelected ? "0 2px 12px rgba(0, 242, 254, 0.25)" : "none"
+                        }}
+                      >
+                        <IconComponent size={18} color={isSelected ? "#00f2fe" : "rgba(255, 255, 255, 0.5)"} />
+                        <span style={{ color: isSelected ? "#fff" : "rgba(255, 255, 255, 0.7)" }}>{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* Bottom Action Buttons */}
+              <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                <button
+                  onClick={() => { setSelectedImage(null); setScanResult(null); startCamera(); }}
+                  style={{
+                    flex: 1, padding: "13px", borderRadius: 12,
+                    background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.12)",
+                    color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                    display: "flex", justifyContent: "center", alignItems: "center", gap: 6,
+                    transition: "all 0.2s ease"
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255, 255, 255, 0.06)"; }}
+                >
+                  <RefreshCw size={14} /> Scan Another
+                </button>
+
+                <button
+                  onClick={handleLogMeal}
+                  disabled={logging}
+                  style={{
+                    flex: 2, padding: "13px", borderRadius: 12,
+                    background: "var(--aura-accent, #00f2fe)",
+                    border: "none", color: "var(--color-on-accent, #000)", fontWeight: 800, fontSize: 13.5,
+                    cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 8,
+                    boxShadow: "0 4px 20px color-mix(in srgb, var(--aura-accent, #00f2fe) 40%, transparent)",
+                    transition: "all 0.2s ease",
+                    opacity: logging ? 0.7 : 1
+                  }}
+                  onMouseEnter={e => { if (!logging) e.currentTarget.style.transform = "translateY(-1px)"; }}
+                  onMouseLeave={e => { if (!logging) e.currentTarget.style.transform = "none"; }}
+                >
+                  <Check size={16} /> {logging ? "Logging..." : `Log to ${selectedCategory}`}
+                </button>
+              </div>
+
             </div>
 
-            {/* Bottom Action Bar */}
-            <div style={{ display: "flex", gap: 10, marginTop: 2 }}>
-              <button
-                onClick={() => { setSelectedImage(null); setScanResult(null); startCamera(); }}
-                style={{
-                  flex: 1, padding: "13px", borderRadius: 12,
-                  background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.12)",
-                  color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer",
-                  display: "flex", justifyContent: "center", alignItems: "center", gap: 6
-                }}
-              >
-                Scan Another
-              </button>
-
-              <button
-                onClick={handleLogMeal}
-                disabled={logging}
-                style={{
-                  flex: 2, padding: "13px", borderRadius: 12,
-                  background: "var(--aura-accent)",
-                  border: "none", color: "var(--color-on-accent)", fontWeight: 800, fontSize: 13.5,
-                  cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: 6,
-                  boxShadow: "0 4px 15px color-mix(in srgb, var(--aura-accent) 30%, transparent)"
-                }}
-              >
-                <Check size={16} /> {logging ? "Logging..." : `Log to ${selectedCategory}`}
-              </button>
-            </div>
           </div>
         )}
       </div>
@@ -627,6 +767,18 @@ export default function MealScanModal({ onClose, onLog }) {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        .meal-scan-horizontal-grid {
+          display: grid;
+          grid-template-columns: 1fr 1.15fr;
+          gap: 20px;
+          align-items: start;
+        }
+        @media (max-width: 768px) {
+          .meal-scan-horizontal-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
         }
       `}</style>
     </div>
