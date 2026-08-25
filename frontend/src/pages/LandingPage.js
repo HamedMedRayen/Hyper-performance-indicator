@@ -149,7 +149,9 @@ export default function LandingPage() {
           height: 100vh;
           height: 100dvh;
           overflow: hidden;
-          background: #050505;
+          background: radial-gradient(circle at 50% 50%, #16181d 0%, #0a0b0d 65%, #050505 100%);
+          display: flex;
+          align-items: center;
         }
 
         .hpi-hero-stage .plate {
@@ -164,21 +166,25 @@ export default function LandingPage() {
 
         .hpi-hero-stage .plate-video {
           position: absolute;
-          inset: 0;
-          width: 100% !important;
-          height: 100% !important;
-          min-width: 100% !important;
-          min-height: 100% !important;
+          inset: -4%;
+          width: 108% !important;
+          height: 108% !important;
+          min-width: 108% !important;
+          min-height: 108% !important;
           max-width: none !important;
           max-height: none !important;
           object-fit: cover !important;
-          object-position: 80% center !important;
+          object-position: center center !important;
+          transform: scale(0.88);
+          transform-origin: center center;
           pointer-events: none;
-          background: #050505;
+          background: transparent;
           display: block;
+          filter: contrast(1.04) brightness(0.98);
         }
 
-        /* Continuous seamless cross-fade overlay: solid black left merging into video right */
+        /* Left and right side degradation (black & grey gradient fade)
+           for cinematic framing, high sharpness, and perfect text contrast */
         .hpi-hero-stage .plate::after {
           content: "";
           position: absolute;
@@ -188,25 +194,27 @@ export default function LandingPage() {
           pointer-events: none;
           z-index: 1;
           background:
-            /* Secondary continuous dark tint over entire video */
-            rgba(15, 15, 15, 0.15),
-            /* Bottom fade into page black */
-            linear-gradient(to bottom,
-              rgba(5,5,5,0) 75%,
-              rgba(5,5,5,.25) 80%,
-              rgba(5,5,5,.70) 86%,
-              rgba(5,5,5,.92) 93%,
+            /* Side degradation: Black -> Slate Grey -> Transparent -> Grey -> Black */
+            linear-gradient(90deg,
+              #050505 0%,
+              rgba(10, 11, 14, 0.95) 8%,
+              rgba(24, 27, 34, 0.75) 18%,
+              rgba(28, 32, 40, 0.40) 30%,
+              rgba(20, 22, 26, 0.10) 42%,
+              transparent 52%,
+              transparent 68%,
+              rgba(20, 22, 26, 0.12) 78%,
+              rgba(28, 32, 40, 0.45) 88%,
+              rgba(12, 13, 16, 0.85) 95%,
               #050505 100%
             ),
-            /* Soft graded merge from opaque left text zone into full video on right */
-            linear-gradient(to right,
-              #050505 0%,
-              #050505 18%,
-              rgba(5,5,5,.94) 26%,
-              rgba(10,10,10,.75) 34%,
-              rgba(15,15,15,.40) 44%,
-              rgba(20,20,20,.12) 55%,
-              transparent 66%
+            /* Subtle top and bottom degradation */
+            linear-gradient(180deg,
+              rgba(5, 5, 5, 0.7) 0%,
+              transparent 14%,
+              transparent 75%,
+              rgba(8, 9, 11, 0.6) 88%,
+              #050505 100%
             );
         }
 
@@ -221,14 +229,20 @@ export default function LandingPage() {
           display: flex;
           align-items: center;
           padding: 0 calc(75 * var(--u));
+          background: linear-gradient(180deg, rgba(5, 5, 5, 0.96) 0%, rgba(8, 9, 11, 0.88) 75%, rgba(10, 11, 14, 0.80) 100%);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
           transition: background-color 0.3s ease, backdrop-filter 0.3s ease, border-color 0.3s ease;
         }
 
         .hpi-landing-root .topbar.scrolled {
-          background-color: rgba(5, 5, 5, 0.85);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(5, 5, 5, 0.96);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         }
 
         /* Clean Logo Mark on Top-Left */
@@ -355,48 +369,46 @@ export default function LandingPage() {
         .hpi-hero-stage .hero-content {
           position: relative;
           z-index: 10;
-          pointer-events: none;
           width: 100%;
           height: 100%;
+          display: flex;
+          align-items: center;
+          padding: 0 max(24px, calc(65 * var(--u)));
+          pointer-events: none;
+        }
+
+        .hpi-hero-stage .hero-text-wrap {
+          max-width: min(520px, 36vw);
+          pointer-events: auto;
         }
 
         .hpi-hero-stage .headline {
-          position: absolute;
-          left: calc(75.5 * var(--u));
-          top: calc(230.5 * var(--u));
-          font-size: calc(71.6 * var(--h));
-          line-height: calc(80.5 * var(--h));
+          font-size: clamp(32px, calc(44 * var(--h)), 50px);
+          line-height: 1.12;
           font-weight: 400;
-          letter-spacing: calc(0.3 * var(--h));
+          letter-spacing: -0.02em;
           color: var(--ink);
-          white-space: nowrap;
-          margin: 0;
+          margin: 0 0 clamp(14px, calc(18 * var(--h)), 22px) 0;
+          white-space: normal;
           pointer-events: none;
         }
         .hpi-hero-stage .headline span { display: block; }
 
         .hpi-hero-stage .sub {
-          position: absolute;
-          left: calc(75.5 * var(--u));
-          top: calc(230.5 * var(--u) + 189.0 * var(--h));
-          font-size: clamp(14px, calc(19.5 * var(--h)), 20.7px);
-          line-height: calc(23.5 * var(--h));
+          font-size: clamp(13.5px, calc(16 * var(--h)), 17px);
+          line-height: 1.5;
           font-weight: 400;
-          word-spacing: calc(1.8 * var(--h));
           color: var(--muted);
-          white-space: nowrap;
-          margin: 0;
+          margin: 0 0 clamp(20px, calc(28 * var(--h)), 34px) 0;
           pointer-events: none;
-          max-width: calc(580 * var(--u));
+          white-space: normal;
         }
         .hpi-hero-stage .sub span { display: block; }
 
         .hpi-hero-stage .actions {
-          position: absolute;
-          left: calc(74.9 * var(--u));
-          top: calc(230.5 * var(--u) + 264.5 * var(--h));
           display: flex;
           align-items: center;
+          gap: clamp(16px, calc(24 * var(--h)), 28px);
           pointer-events: auto;
           z-index: 15;
         }
@@ -414,7 +426,6 @@ export default function LandingPage() {
         }
 
         .hpi-hero-stage .ghost {
-          margin-left: calc(45 * var(--h));
           font-size: calc(20.6 * var(--h));
           font-weight: 500;
           letter-spacing: calc(0.12 * var(--h));
@@ -654,9 +665,9 @@ export default function LandingPage() {
         }
 
         @media (prefers-reduced-motion: no-preference) {
-          .hpi-hero-stage .headline { animation: hpiRise 0.9s var(--ease) 0.06s both; }
-          .hpi-hero-stage .sub { animation: hpiRise 0.9s var(--ease) 0.14s both; }
-          .hpi-hero-stage .actions { animation: hpiRise 0.9s var(--ease) 0.22s both; }
+          .hpi-hero-stage .hero-text-wrap .headline { animation: hpiRise 0.9s var(--ease) 0.06s both; }
+          .hpi-hero-stage .hero-text-wrap .sub { animation: hpiRise 0.9s var(--ease) 0.14s both; }
+          .hpi-hero-stage .hero-text-wrap .actions { animation: hpiRise 0.9s var(--ease) 0.22s both; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -690,8 +701,8 @@ export default function LandingPage() {
             min-height: 100dvh;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            padding: max(85px, env(safe-area-inset-top)) 20px 30px 20px;
+            justify-content: flex-end;
+            padding: max(95px, env(safe-area-inset-top)) 20px 40px 20px;
           }
 
           .hpi-hero-stage .plate-video {
@@ -700,14 +711,13 @@ export default function LandingPage() {
             width: 100% !important;
             height: 100% !important;
             object-fit: cover !important;
-            object-position: 70% center !important;
+            object-position: center center !important;
           }
 
           .hpi-hero-stage .plate::after {
             background:
-              rgba(15, 15, 15, 0.25),
               linear-gradient(to bottom,
-                rgba(5,5,5,0.85) 0%,
+                rgba(5,5,5,0.45) 0%,
                 rgba(5,5,5,0.70) 45%,
                 rgba(5,5,5,0.92) 80%,
                 #050505 100%
@@ -715,39 +725,33 @@ export default function LandingPage() {
           }
 
           .hpi-hero-stage .hero-content {
-            position: relative;
-            margin-top: 40px;
+            padding: 0;
             height: auto;
           }
 
+          .hpi-hero-stage .hero-text-wrap {
+            max-width: 100%;
+          }
+
           .hpi-hero-stage .headline {
-            position: relative;
-            left: auto;
-            top: auto;
-            font-size: clamp(34px, calc(46 * var(--m)), 52px);
-            line-height: 1.15;
+            font-size: clamp(32px, calc(42 * var(--m)), 48px);
+            line-height: 1.12;
             white-space: normal;
+            margin-bottom: 14px;
           }
           .hpi-hero-stage .headline span { display: inline; }
 
           .hpi-hero-stage .sub {
-            position: relative;
-            left: auto;
-            top: auto;
-            margin-top: 18px;
-            font-size: clamp(15px, calc(18 * var(--m)), 20px);
+            font-size: clamp(14px, calc(16 * var(--m)), 18px);
             line-height: 1.45;
             white-space: normal;
             word-spacing: normal;
             max-width: 100%;
+            margin-bottom: 24px;
           }
           .hpi-hero-stage .sub span { display: inline; }
 
           .hpi-hero-stage .actions {
-            position: relative;
-            left: auto;
-            top: auto;
-            margin-top: 32px;
             display: flex;
             flex-direction: column;
             align-items: stretch;
@@ -942,21 +946,21 @@ export default function LandingPage() {
         </div>
 
         <div className="hero-content">
-          <h1 className="headline">
-            <span>The Next Layer</span>
-            <span>of Performance</span>
-          </h1>
-          <p className="sub">
-            <span>A unified performance-tracking platform to help athletes</span>
-            <span>train, measure, and improve with confidence.</span>
-          </p>
-          <div className="actions">
-            <button type="button" className="pill pill-cta" onClick={handleSignUp}>
-              <span>Get Started</span>
-            </button>
-            <button type="button" className="ghost" onClick={(e) => scrollToSection("architecture", e)}>
-              View Architecture
-            </button>
+          <div className="hero-text-wrap">
+            <h1 className="headline">
+              Where AI Coaching Meets Real Human Expertise.
+            </h1>
+            <p className="sub">
+              Get instant, data-driven guidance from your AI coach and hands-on direction from real trainers all backed by advanced recovery and performance analytics.
+            </p>
+            <div className="actions">
+              <button type="button" className="pill pill-cta" onClick={handleSignUp}>
+                <span>Get Started</span>
+              </button>
+              <button type="button" className="ghost" onClick={(e) => scrollToSection("architecture", e)}>
+                View Architecture
+              </button>
+            </div>
           </div>
         </div>
       </div>
