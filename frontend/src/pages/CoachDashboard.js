@@ -16,6 +16,7 @@ import RequireCoachRole from "../components/auth/RequireCoachRole";
 import CoachWorkspaceNav from "../components/coach/CoachWorkspaceNav";
 import ScheduleSection from "../components/coach/ScheduleSection";
 import AiReportsSection from "../components/coach/AiReportsSection";
+import EventsSection from "../components/coach/EventsSection";
 import L from "../utils/leafletSetup";
 
 const GOAL_LABELS = {
