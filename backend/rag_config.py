@@ -29,7 +29,7 @@ DUCKDB_TABLE = "gym_data"
 
 # Groq models
 GROQ_CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-120b")
-CLASSIFICATION_MODEL = os.getenv("CLASSIFICATION_MODEL", "llama-3.1-8b-instant")   # fast, cheap — classification only
+CLASSIFICATION_MODEL = os.getenv("CLASSIFICATION_MODEL", "openai/gpt-oss-20b")   # fast, active — classification
 SQL_GENERATION_MODEL = os.getenv("SQL_GENERATION_MODEL", GROQ_CHAT_MODEL)          # accurate — SQL generation
 
 # ── Environment variables ──────────────────────────────────────

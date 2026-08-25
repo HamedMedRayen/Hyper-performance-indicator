@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
+import "./utils/leafletSetup";
 import App from "./App";
 
 import { GoogleOAuthProvider } from "@react-oauth/google";

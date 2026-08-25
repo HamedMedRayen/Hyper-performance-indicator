@@ -22,7 +22,7 @@ const THEMES = [
   { id: 'nature', color: '#4A7C59', Icon: Leaf, label: 'Nature' },
   { id: 'fire', color: '#ff0000', Icon: Flame, label: 'Fire' },
   { id: 'queen', color: '#ff718b', Icon: RoseIcon, label: 'Queen' },
-  { id: 'monochrome', color: '#e2e8f0', Icon: Contrast, label: 'Mono' },
+  { id: 'monochrome', color: '#ff3b5c', Icon: Flame, label: 'Obsidian Pulse' },
   { id: 'cyberpunk', color: '#00ffcc', Icon: Zap, label: 'Cyber' },
 ];
 
@@ -91,7 +91,7 @@ export default function OrbThemeSwitcher() {
         }}
       >
         <div style={{
-          color: displayTheme === 'monochrome' ? '#111' : '#fff',
+          color: '#fff',
           filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.4))',
           transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
           transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)',
@@ -125,7 +125,7 @@ export default function OrbThemeSwitcher() {
           transformOrigin: 'top right',
         }}
       >
-        {THEMES.filter(t => t.id === 'dark' || t.id === 'main').map((t, i) => {
+        {THEMES.filter(t => t.id === 'dark' || t.id === 'main' || t.id === 'monochrome').map((t, i) => {
           const isActive = t.id === activeTheme;
           return (
             <button
@@ -174,7 +174,7 @@ export default function OrbThemeSwitcher() {
               }}>
                 <t.Icon
                   size={13}
-                  style={{ color: t.id === 'monochrome' ? '#111' : '#fff' }}
+                  style={{ color: '#fff' }}
                 />
               </div>
 

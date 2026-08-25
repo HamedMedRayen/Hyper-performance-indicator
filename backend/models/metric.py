@@ -26,27 +26,6 @@ class MetricRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class PCAResult(BaseModel):
-    """Result of PCA computation on workout metrics."""
-    points: List[Dict[str, float]]       # [{x, y, date, volume}, ...]
-    explained_variance: List[float]       # [var_pc1, var_pc2]
-    eigenvalues: List[float]
-    loading_matrix: List[List[float]]     # shape [n_features, n_components]
-    feature_names: List[str]
-    n_samples: int
-
-
-class GBDTResult(BaseModel):
-    """GBDT training result and predictions."""
-    predictions: List[float]
-    actuals: List[float]
-    dates: List[str]
-    mse: float
-    mae: float
-    r_squared: float
-    n_estimators_used: int
-    feature_importances: Dict[str, float]
-
 
 class VolumeProgression(BaseModel):
     dates: List[str]

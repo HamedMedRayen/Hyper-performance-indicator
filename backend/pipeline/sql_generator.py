@@ -97,7 +97,9 @@ def generate_sql(
             table_name=DUCKDB_TABLE,
         )
 
-        completion = client.chat.completions.create(
+        from services.llm_service import create_groq_chat_completion
+        completion = create_groq_chat_completion(
+            client=client,
             model=SQL_GENERATION_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.0,

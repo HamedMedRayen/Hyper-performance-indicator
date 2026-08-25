@@ -1,11 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
-// Ensure global window.L is set
-if (typeof window !== "undefined" && !window.L) {
-  window.L = L;
-}
+import L from "../../utils/leafletSetup";
 
 export default function MobileGymMap({
   gyms = [],
@@ -18,6 +12,7 @@ export default function MobileGymMap({
   const mapInstanceRef = useRef(null);
   const markersLayerRef = useRef(null);
   const userMarkerRef = useRef(null);
+  const isFirstRender = useRef(true);
 
   // Initialize Map on mount
   useEffect(() => {
@@ -27,8 +22,9 @@ export default function MobileGymMap({
     // Clean up any stale Leaflet instance on this container
     if (mapInstanceRef.current) {
       try {
-        mapInstanceRef.current.off();
-        mapInstanceRef.current.remove();
+        mapInstanceRef.current.stop?.();
+        mapInstanceRef.current.off?.();
+        mapInstanceRef.current.remove?.();
       } catch (e) {
         console.error("Leaflet remove error:", e);
       }
@@ -83,9 +79,15 @@ export default function MobileGymMap({
 
     // Force multi-stage invalidateSize to ensure tiles render immediately in mobile WebViews
     map.invalidateSize();
-    const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 50);
-    const t2 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 200);
-    const t3 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 500);
+    const t1 = setTimeout(() => {
+      if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
+    }, 50);
+    const t2 = setTimeout(() => {
+      if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
+    }, 200);
+    const t3 = setTimeout(() => {
+      if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
+    }, 500);
 
     return () => {
       clearTimeout(t1);
@@ -93,24 +95,36 @@ export default function MobileGymMap({
       clearTimeout(t3);
       if (mapInstanceRef.current) {
         try {
-          mapInstanceRef.current.off();
-          mapInstanceRef.current.remove();
+          mapInstanceRef.current.stop?.();
+          mapInstanceRef.current.off?.();
+          mapInstanceRef.current.remove?.();
         } catch (e) {}
         mapInstanceRef.current = null;
+      }
+      if (container && container._leaflet_id) {
+        container._leaflet_id = null;
       }
     };
   }, []); // Run once when this component mounts
 
-  // Fly / pan when region or user location changes
+  // Fly / pan when region or user location changes (skip initial mount to avoid conflict)
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     if (mapInstanceRef.current) {
       const zoom = selectedRegion === "all" ? 10 : 13;
-      mapInstanceRef.current.flyTo([userLoc.lat, userLoc.lng], zoom, {
-        duration: 0.6
-      });
+      try {
+        mapInstanceRef.current.flyTo([userLoc.lat, userLoc.lng], zoom, {
+          duration: 0.6
+        });
+      } catch (e) {}
     }
     if (userMarkerRef.current) {
-      userMarkerRef.current.setLatLng([userLoc.lat, userLoc.lng]);
+      try {
+        userMarkerRef.current.setLatLng([userLoc.lat, userLoc.lng]);
+      } catch (e) {}
     }
   }, [userLoc.lat, userLoc.lng, selectedRegion]);
 

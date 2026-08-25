@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { LayoutDashboard, ShieldCheck, Users, Flag, FileText, Shield } from "lucide-react";
 import AdminOverview from "./AdminOverview";
 import CoachVerificationQueue from "./CoachVerificationQueue";
@@ -7,7 +8,21 @@ import ReportsInbox from "./ReportsInbox";
 import AuditLog from "./AuditLog";
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "overview";
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId });
+  };
 
   const navItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -18,30 +33,23 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "240px 1fr",
-        gap: 24,
-        minHeight: "82vh",
-        padding: "8px 0"
-      }}
-    >
-      {/* Admin Sidebar Navigation */}
-      <aside
+    <div style={{ display: "flex", flexDirection: "column", gap: 18, width: "100%", paddingBottom: 24 }}>
+      {/* Top Admin Command Bar */}
+      <div
         style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 12,
           background: "rgba(15, 23, 42, 0.6)",
           backdropFilter: "blur(16px)",
           border: "1px solid rgba(255, 255, 255, 0.08)",
-          borderRadius: 20,
-          padding: 16,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-          height: "fit-content"
+          borderRadius: 16,
+          padding: "10px 16px"
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div
             style={{
               width: 32,
@@ -55,49 +63,49 @@ export default function AdminDashboard() {
               color: "#ef4444"
             }}
           >
-            <Shield size={18} />
+            <Shield size={16} />
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: "#fff" }}>Admin Module</div>
-            <div style={{ fontSize: 11, color: "#94a3b8" }}>HPI Administration</div>
+            <div style={{ fontSize: 14, fontWeight: 900, color: "#fff", lineHeight: 1.2 }}>Admin Portal</div>
+            <div style={{ fontSize: 11, color: "#94a3b8" }}>System Management & Moderation</div>
           </div>
         </div>
 
-        <nav style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {/* Horizontal Navigation Tabs */}
+        <nav style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleTabChange(item.id)}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 12,
-                  padding: "10px 14px",
-                  borderRadius: 12,
-                  border: "none",
-                  background: isActive ? "linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(2, 132, 199, 0.1) 100%)" : "transparent",
+                  gap: 8,
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  border: isActive ? "1px solid rgba(56, 189, 248, 0.4)" : "1px solid transparent",
+                  background: isActive ? "rgba(14, 165, 233, 0.15)" : "rgba(255, 255, 255, 0.03)",
                   color: isActive ? "#38bdf8" : "#94a3b8",
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: 700,
                   cursor: "pointer",
-                  textAlign: "left",
                   transition: "all 0.15s ease"
                 }}
               >
-                <Icon size={18} color={isActive ? "#38bdf8" : "#64748b"} />
+                <Icon size={15} color={isActive ? "#38bdf8" : "#64748b"} />
                 <span>{item.label}</span>
               </button>
             );
           })}
         </nav>
-      </aside>
+      </div>
 
       {/* Main Admin View Content */}
-      <main style={{ minWidth: 0 }}>
-        {activeTab === "overview" && <AdminOverview setActiveTab={setActiveTab} />}
+      <main style={{ minWidth: 0, width: "100%" }}>
+        {activeTab === "overview" && <AdminOverview setActiveTab={handleTabChange} />}
         {activeTab === "verifications" && <CoachVerificationQueue />}
         {activeTab === "users" && <UserManagement />}
         {activeTab === "reports" && <ReportsInbox />}

@@ -109,8 +109,12 @@ def get_all_coaches(current_user_id: int = Depends(get_current_user_id), db=Depe
     """List all coaches and the current user's relationship status with them, including ratings and athlete count."""
     with db.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
-            SELECT u.id as coach_id, u.name as coach_name, u.email as coach_email, 
+            SELECT u.id as coach_id, 
+                   COALESCE(NULLIF(u.name, ''), a.nickname, u.email) as coach_name,
+                   a.nickname as coach_nickname,
+                   u.email as coach_email, 
                    u.avatar_url as coach_avatar, u.experience, u.goal, u.age, u.sex, u.bio,
+                   u.is_suspended, u.suspension_reason, u.suspended_until,
                    r.id as relationship_id, r.status, r.initiated_by,
                    COALESCE(ROUND(AVG(rev.rating)::numeric, 1), 4.8) as rating,
                    COUNT(DISTINCT rev.id) as review_count,
@@ -119,19 +123,26 @@ def get_all_coaches(current_user_id: int = Depends(get_current_user_id), db=Depe
                      + 12 + MOD(u.id, 20)
                    ) as athletes_count
             FROM users u
+            LEFT JOIN auth_users a ON u.auth_id = a.id
             LEFT JOIN coach_relationships r 
               ON r.coach_id = u.id AND r.athlete_id = %s
-            LEFT JOIN coach_reviews rev
-              ON rev.coach_id = u.id
-            WHERE u.role = 'coach' AND (u.approved = TRUE OR u.coach_verified = TRUE OR u.verification_status = 'approved')
-            GROUP BY u.id, u.name, u.email, u.avatar_url, u.experience, u.goal, u.age, u.sex, u.bio, r.id, r.status, r.initiated_by
-            ORDER BY u.name ASC
+            LEFT JOIN coach_reviews rev ON rev.coach_id = u.id
+            WHERE u.role = 'coach' 
+              AND (
+                u.verification_status = 'approved' 
+                OR (u.verification_status IS NULL AND (u.approved = TRUE OR u.coach_verified = TRUE))
+              )
+              AND (u.verification_status IS NULL OR u.verification_status NOT IN ('pending', 'rejected', 'unsubmitted'))
+            GROUP BY u.id, u.name, a.nickname, u.email, u.avatar_url, u.experience, u.goal, u.age, u.sex, u.bio, u.is_suspended, u.suspension_reason, u.suspended_until, r.id, r.status, r.initiated_by
+            ORDER BY coach_name ASC
         """, (current_user_id,))
         rows = cur.fetchall()
         for r in rows:
             r["rating"] = float(r["rating"]) if r.get("rating") else 4.8
             r["review_count"] = int(r["review_count"]) if r.get("review_count") else 0
             r["athletes_count"] = int(r["athletes_count"]) if r.get("athletes_count") else 15
+            if r.get("suspended_until") and hasattr(r["suspended_until"], "isoformat"):
+                r["suspended_until"] = r["suspended_until"].isoformat()
         return rows
 
 @router.get("/coaches/{coach_id}")
@@ -139,10 +150,15 @@ def get_coach_profile(coach_id: int, current_user_id: int = Depends(get_current_
     """Get complete profile details of a coach including bio, ratings, comments, and athlete count."""
     with db.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
-            SELECT u.id as coach_id, u.name as coach_name, u.email as coach_email, 
+            SELECT u.id as coach_id, 
+                   COALESCE(NULLIF(u.name, ''), a.nickname, u.email) as coach_name,
+                   a.nickname as coach_nickname,
+                   u.email as coach_email, 
                    u.avatar_url as coach_avatar, u.experience, u.goal, u.age, u.sex, u.bio, u.cv_url,
+                   u.is_suspended, u.suspension_reason, u.suspended_until,
                    r.id as relationship_id, r.status, r.initiated_by
             FROM users u
+            LEFT JOIN auth_users a ON u.auth_id = a.id
             LEFT JOIN coach_relationships r 
               ON r.coach_id = u.id AND r.athlete_id = %s
             WHERE u.id = %s AND u.role = 'coach'
@@ -150,6 +166,9 @@ def get_coach_profile(coach_id: int, current_user_id: int = Depends(get_current_
         coach = cur.fetchone()
         if not coach:
             raise HTTPException(status_code=404, detail="Coach not found")
+        
+        if coach.get("suspended_until") and hasattr(coach["suspended_until"], "isoformat"):
+            coach["suspended_until"] = coach["suspended_until"].isoformat()
         
         cur.execute("""
             SELECT id, user_id, user_name, user_avatar, rating, comment, created_at
@@ -686,10 +705,19 @@ def get_gyms(db=Depends(get_db)):
         # For each gym, get associated coaches
         for gym in gyms:
             cur.execute("""
-                SELECT u.id as coach_id, u.name, u.email, u.avatar_url, u.experience, u.goal, u.age, u.sex
+                SELECT u.id as coach_id, 
+                       COALESCE(NULLIF(u.name, ''), a.nickname, u.email) as name, 
+                       a.nickname,
+                       u.email, u.avatar_url, u.experience, u.goal, u.age, u.sex
                 FROM coach_gyms cg
                 JOIN users u ON cg.coach_id = u.id
-                WHERE cg.gym_id = %s AND u.approved = TRUE
+                LEFT JOIN auth_users a ON u.auth_id = a.id
+                WHERE cg.gym_id = %s 
+                  AND (
+                    u.verification_status = 'approved' 
+                    OR (u.verification_status IS NULL AND (u.approved = TRUE OR u.coach_verified = TRUE))
+                  )
+                  AND (u.verification_status IS NULL OR u.verification_status NOT IN ('pending', 'rejected', 'unsubmitted'))
             """, (gym["id"],))
             gym["coaches"] = cur.fetchall()
         return gyms
@@ -713,43 +741,30 @@ async def coach_onboarding(
     age: int = Form(...),
     sex: str = Form(...),
     bio: str = Form(None),
-    cv_file: UploadFile = File(...),
+    cv: UploadFile = File(None),
     current_user_id: int = Depends(get_current_user_id),
     db=Depends(get_db)
 ):
     """Submit CV and profile info for coach onboarding. Status set to approved = FALSE."""
-    # 1. Validate file extension/type (accept PDF, DOCX, Images)
-    ext = os.path.splitext(cv_file.filename)[1].lower()
-    if ext not in [".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg"]:
-        raise HTTPException(status_code=400, detail="CV must be a PDF, Word Document, or Image")
+    cv_url = None
+    if cv:
+        try:
+            os.makedirs(UPLOAD_DIR, exist_ok=True)
+            safe_name = f"coach_cv_{current_user_id}_{int(datetime.now().timestamp())}_{cv.filename}"
+            file_path = os.path.join(UPLOAD_DIR, safe_name)
+            with open(file_path, "wb") as f:
+                f.write(await cv.read())
+            cv_url = f"/uploads/{safe_name}"
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to upload CV: {str(e)}")
 
-    # 2. Ensure uploads directory exists
-    uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
-    os.makedirs(uploads_dir, exist_ok=True)
-
-    # 3. Create unique filename
-    filename = f"cv_{current_user_id}_{uuid.uuid4().hex}{ext}"
-    file_path = os.path.join(uploads_dir, filename)
-
-    # 4. Save file
-    try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(cv_file.file, buffer)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Could not save CV file: {str(e)}")
-
-    # 5. Get base URL and form url path
-    from database import BASE_URL
-    cv_url = f"{BASE_URL}/api/uploads/{filename}"
-
-    # 6. Update database fields
     with db.cursor() as cur:
-        # Check if user is a coach
-        cur.execute("SELECT role FROM users WHERE id = %s", (current_user_id,))
-        usr = cur.fetchone()
-        role = usr.get("role") if isinstance(usr, dict) else (usr[0] if usr else None)
-        if not usr or role != 'coach':
-            raise HTTPException(status_code=400, detail="Only users with the 'coach' role can submit onboarding.")
+        cur.execute("""
+            INSERT INTO coach_profiles (coach_id, bio, certifications, specialties)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (coach_id) DO UPDATE 
+            SET bio = EXCLUDED.bio, certifications = EXCLUDED.certifications, specialties = EXCLUDED.specialties, updated_at = NOW()
+        """, (current_user_id, bio, cv_url or "", specialty))
 
         cur.execute("""
             UPDATE users 
@@ -762,7 +777,7 @@ async def coach_onboarding(
         cur.execute("""
             INSERT INTO coach_verifications (coach_id, status, document_urls, submitted_at)
             VALUES (%s, 'pending', %s, NOW())
-        """, (current_user_id, json.dumps([cv_url])))
+        """, (current_user_id, json.dumps([cv_url]) if cv_url else "[]"))
     
     db.commit()
     return {"success": True, "message": "Verification documents submitted successfully. Your profile is now under review."}
@@ -789,11 +804,12 @@ def get_verification_status(current_user_id: int = Depends(get_current_user_id),
             else:
                 status = "unsubmitted"
 
+        is_approved = (status == "approved")
         return {
             "user_id": current_user_id,
             "role": row.get("role", "athlete"),
-            "approved": bool(row.get("approved") or row.get("coach_verified")),
-            "coach_verified": bool(row.get("coach_verified") or row.get("approved")),
+            "approved": is_approved,
+            "coach_verified": is_approved,
             "verification_status": status,
             "cv_url": row.get("cv_url"),
             "rejection_reason": row.get("rejection_reason"),
@@ -803,4 +819,3 @@ def get_verification_status(current_user_id: int = Depends(get_current_user_id),
             "age": row.get("age"),
             "sex": row.get("sex")
         }
-

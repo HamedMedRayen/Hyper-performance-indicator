@@ -43,8 +43,8 @@ export default function RequireCoachRole({ children }) {
 
   const role = statusInfo?.role || user?.role || user?.profile?.role || "athlete";
   const isApproved = statusInfo
-    ? (statusInfo.approved || statusInfo.coach_verified || statusInfo.verification_status === "approved")
-    : (user?.approved || user?.coach_verified || user?.verification_status === "approved");
+    ? (statusInfo.verification_status === "approved" || (!statusInfo.verification_status && (statusInfo.approved || statusInfo.coach_verified)))
+    : (user?.verification_status === "approved" || (!user?.verification_status && (user?.approved || user?.coach_verified)));
 
   if (role !== "coach") {
     return <Navigate to="/coach" replace state={{ from: location }} />;

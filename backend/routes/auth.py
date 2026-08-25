@@ -87,6 +87,31 @@ def get_current_user_id(current=Depends(get_current_user)) -> int:
     return uid
 
 
+def _check_and_refresh_suspension(db, user_id: int, user_row: dict) -> dict:
+    from datetime import datetime, timezone
+    if user_row.get("is_suspended"):
+        suspended_until = user_row.get("suspended_until")
+        if suspended_until:
+            now_utc = datetime.now(timezone.utc)
+            if isinstance(suspended_until, str):
+                try:
+                    suspended_until = datetime.fromisoformat(suspended_until.replace("Z", "+00:00"))
+                except Exception:
+                    pass
+            if isinstance(suspended_until, datetime) and suspended_until <= now_utc:
+                with db.cursor() as cur:
+                    cur.execute("""
+                        UPDATE users 
+                        SET is_suspended = FALSE, suspension_reason = NULL, suspended_until = NULL, updated_at = NOW()
+                        WHERE id = %s
+                    """, (user_id,))
+                    db.commit()
+                user_row["is_suspended"] = False
+                user_row["suspension_reason"] = None
+                user_row["suspended_until"] = None
+    return user_row
+
+
 def require_admin(
     current: dict = Depends(get_current_user),
     db: psycopg2.extensions.connection = Depends(get_db),
@@ -95,10 +120,12 @@ def require_admin(
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated.")
     with db.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute("SELECT role, is_suspended FROM users WHERE id = %s", (user_id,))
+        cur.execute("SELECT role, is_suspended, suspension_reason, suspended_until FROM users WHERE id = %s", (user_id,))
         u = cur.fetchone()
     if not u:
         raise HTTPException(status_code=404, detail="User profile not found.")
+    
+    u = _check_and_refresh_suspension(db, user_id, u)
     if u.get("is_suspended"):
         raise HTTPException(status_code=403, detail="Account is suspended.")
     if u.get("role") != "admin":
@@ -232,11 +259,39 @@ def me(current=Depends(get_current_user), db: psycopg2.extensions.connection = D
             "SELECT * FROM users WHERE id = %s", (current["user_id"],)
         )
         row = cur.fetchone()
+    
+    if row:
+        row = _check_and_refresh_suspension(db, current["user_id"], row)
+        if row.get("suspended_until") and hasattr(row["suspended_until"], "isoformat"):
+            row["suspended_until"] = row["suspended_until"].isoformat()
+        if row.get("created_at") and hasattr(row["created_at"], "isoformat"):
+            row["created_at"] = row["created_at"].isoformat()
+        if row.get("updated_at") and hasattr(row["updated_at"], "isoformat"):
+            row["updated_at"] = row["updated_at"].isoformat()
+
     role = row.get("role", "athlete") if row else "athlete"
     avatar_url = row.get("avatar_url") if row else None
     onboarding_completed = True if role == "admin" else (bool(row.get("onboarding_completed", False)) if row else False)
-    coach_verified = bool(row.get("coach_verified", False) or row.get("approved", False)) if row else False
-    verification_status = row.get("verification_status") or ("approved" if coach_verified else ("pending" if row.get("cv_url") else "unsubmitted")) if row else "unsubmitted"
+    v_status = row.get("verification_status") if row else "unsubmitted"
+    if v_status == "approved":
+        coach_verified = True
+    elif v_status in ("pending", "rejected", "unsubmitted"):
+        coach_verified = False
+    else:
+        coach_verified = bool(row.get("coach_verified", False) or row.get("approved", False)) if row else False
+        v_status = "approved" if coach_verified else ("pending" if (row and row.get("cv_url")) else "unsubmitted")
+    verification_status = v_status
+
+    is_suspended = bool(row.get("is_suspended", False)) if row else False
+    suspension_reason = row.get("suspension_reason") if row else None
+    suspended_until = row.get("suspended_until") if row else None
+
+    profile_dict = dict(row) if row else None
+    if profile_dict:
+        profile_dict["coach_verified"] = coach_verified
+        profile_dict["approved"] = coach_verified
+        profile_dict["verification_status"] = verification_status
+
     return {
         **current, 
         "role": role, 
@@ -244,5 +299,8 @@ def me(current=Depends(get_current_user), db: psycopg2.extensions.connection = D
         "onboarding_completed": onboarding_completed,
         "coach_verified": coach_verified,
         "verification_status": verification_status,
-        "profile": dict(row) if row else None
+        "is_suspended": is_suspended,
+        "suspension_reason": suspension_reason,
+        "suspended_until": suspended_until,
+        "profile": profile_dict
     }

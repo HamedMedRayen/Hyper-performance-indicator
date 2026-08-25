@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS users (
     role         TEXT    DEFAULT 'athlete',
     is_suspended BOOLEAN DEFAULT FALSE,
     suspension_reason TEXT,
+    suspended_until TIMESTAMPTZ,
     created_at   TIMESTAMPTZ DEFAULT NOW(),
     updated_at   TIMESTAMPTZ DEFAULT NOW(),
     avatar_url   TEXT,
@@ -1086,6 +1087,13 @@ def _do_init_db() -> None:
                     ALTER TABLE users ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
                     ALTER TABLE users ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN DEFAULT FALSE;
                     ALTER TABLE users ADD COLUMN IF NOT EXISTS suspension_reason TEXT;
+                    ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_until TIMESTAMPTZ;
+                    
+                    ALTER TABLE reports ADD COLUMN IF NOT EXISTS inquiry_sent BOOLEAN DEFAULT FALSE;
+                    ALTER TABLE reports ADD COLUMN IF NOT EXISTS inquiry_notes TEXT;
+                    ALTER TABLE reports ADD COLUMN IF NOT EXISTS inquiry_at TIMESTAMPTZ;
+                    ALTER TABLE reports ADD COLUMN IF NOT EXISTS inquiry_reply TEXT;
+                    ALTER TABLE reports ADD COLUMN IF NOT EXISTS inquiry_reply_at TIMESTAMPTZ;
                     
                     ALTER TABLE coach_relationships ADD COLUMN IF NOT EXISTS initiated_by TEXT DEFAULT 'coach';
                     ALTER TABLE events ADD COLUMN IF NOT EXISTS cost_tnd REAL DEFAULT 0.0;
@@ -1101,12 +1109,13 @@ def _do_init_db() -> None:
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS gyms (
                         id BIGSERIAL PRIMARY KEY,
-                        name TEXT NOT NULL,
+                        name TEXT NOT NULL UNIQUE,
                         address TEXT,
                         latitude DOUBLE PRECISION NOT NULL,
                         longitude DOUBLE PRECISION NOT NULL,
                         created_at TIMESTAMPTZ DEFAULT NOW()
                     );
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_gyms_name ON gyms(name);
                     CREATE TABLE IF NOT EXISTS coach_gyms (
                         id BIGSERIAL PRIMARY KEY,
                         coach_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
@@ -1268,9 +1277,26 @@ def _do_init_db() -> None:
                 seed_synthetic_fares2024(conn)
                 seed_synthetic_coach_verifications(conn)
                 seed_synthetic_reports(conn)
+                seed_synthetic_gyms(conn)
                 seed_default_admin(conn)
             except Exception:
                 pass
+
+            # Sync coach_verified and approved flags with verification_status
+            try:
+                cur.execute("""
+                    UPDATE users 
+                    SET coach_verified = FALSE, approved = FALSE 
+                    WHERE verification_status IN ('pending', 'rejected', 'unsubmitted');
+
+                    UPDATE users 
+                    SET coach_verified = TRUE, approved = TRUE 
+                    WHERE verification_status = 'approved';
+                """)
+                conn.commit()
+            except Exception:
+                try: conn.rollback()
+                except Exception: pass
     except Exception as e:
         print(f"[DB] Error during init: {str(e)[:100]}", flush=True)
         try:
@@ -1280,6 +1306,131 @@ def _do_init_db() -> None:
         raise
     finally:
         conn.close()
+
+
+
+def seed_synthetic_gyms(conn) -> None:
+    """Seed an extensive list of premier gyms across Tunisia's regions and governorates."""
+    gym_list = [
+        # --- Tunis & Suburbs ---
+        {"name": "California Gym (Lac 2)", "address": "Les Berges du Lac 2, Tunis", "latitude": 36.8475, "longitude": 10.2652},
+        {"name": "California Gym (Lac 1)", "address": "Les Berges du Lac 1, Tunis", "latitude": 36.8340, "longitude": 10.2360},
+        {"name": "California Gym (Centre Urbain Nord)", "address": "Centre Urbain Nord, Tunis", "latitude": 36.8488, "longitude": 10.1982},
+        {"name": "Giga Fit (Lac 1)", "address": "Les Berges du Lac 1, Tunis", "latitude": 36.8378, "longitude": 10.2392},
+        {"name": "Titanium Gym (La Marsa)", "address": "Rue Habib Bourguiba, La Marsa, Tunis", "latitude": 36.8858, "longitude": 10.3228},
+        {"name": "Carthage Heavy Iron Gym", "address": "Avenue Habib Bourguiba, Carthage, Tunis", "latitude": 36.8528, "longitude": 10.3275},
+        {"name": "Gym Box (El Manar)", "address": "El Manar 2, Tunis", "latitude": 36.8329, "longitude": 10.1492},
+        {"name": "Olympysky Fitness Club (Menzah 5)", "address": "Avenue Louis Braille, Menzah 5, Tunis", "latitude": 36.8415, "longitude": 10.1685},
+        {"name": "Body Line Club (Menzah 6)", "address": "Rue Ahmed Tlili, Menzah 6, Tunis", "latitude": 36.8442, "longitude": 10.1620},
+        {"name": "Black Bull Gym (Mutuelleville)", "address": "Rue Taieb Mhiri, Mutuelleville, Tunis", "latitude": 36.8285, "longitude": 10.1740},
+        {"name": "Square Fitness Club (Gammarth)", "address": "Zone Touristique Gammarth, Tunis", "latitude": 36.9180, "longitude": 10.2860},
+        {"name": "Iron Bull Gym (Bardo)", "address": "Avenue Habib Bougatfa, Le Bardo, Tunis", "latitude": 36.8090, "longitude": 10.1380},
+        {"name": "Power Zone Gym (Centre Ville)", "address": "Avenue Jean Jaurès, Tunis Centre", "latitude": 36.8010, "longitude": 10.1830},
+        {"name": "World Gym Club (Menzah 1)", "address": "Rue Pierre de Coubertin, Menzah 1, Tunis", "latitude": 36.8360, "longitude": 10.1760},
+        {"name": "Fight & Fit Academy (Carthage)", "address": "Avenue de la République, Carthage Dermech", "latitude": 36.8580, "longitude": 10.3320},
+
+        # --- Ariana ---
+        {"name": "California Gym (Ennasr)", "address": "Avenue Hédi Nouira, Ennasr 2, Ariana", "latitude": 36.8576, "longitude": 10.1704},
+        {"name": "The Fit Loft (La Soukra)", "address": "Avenue de l'UMA, La Soukra, Ariana", "latitude": 36.8647, "longitude": 10.2238},
+        {"name": "Crossfit 216 (La Soukra)", "address": "Rue de l'Aéroport, La Soukra, Ariana", "latitude": 36.8710, "longitude": 10.2380},
+        {"name": "Fitness Park (Tunis City - Géant)", "address": "Route de Bizerte Km 12, Cebalat, Ariana", "latitude": 36.8920, "longitude": 10.1280},
+        {"name": "Gym Arena (Ennasr 1)", "address": "Avenue Ariana Les Roses, Ennasr 1, Ariana", "latitude": 36.8520, "longitude": 10.1660},
+        {"name": "Pulse Fitness Club (Borj Louzir)", "address": "Avenue de la Liberté, Borj Louzir, Ariana", "latitude": 36.8790, "longitude": 10.1890},
+        {"name": "Ultra Gym (Raoued)", "address": "Avenue Jaafar, Raoued, Ariana", "latitude": 36.9020, "longitude": 10.1810},
+
+        # --- Ben Arous & South Suburbs ---
+        {"name": "California Gym (Ben Arous)", "address": "Avenue de France, Ben Arous", "latitude": 36.7533, "longitude": 10.2223},
+        {"name": "Oxygen Gym (Megrine)", "address": "Rue de la Gare, Megrine, Ben Arous", "latitude": 36.7441, "longitude": 10.2285},
+        {"name": "Radès Fitness & Cross Training", "address": "Avenue Habib Bourguiba, Radès, Ben Arous", "latitude": 36.7680, "longitude": 10.2740},
+        {"name": "California Gym (Boumhel)", "address": "GP1, Boumhel El Bassatine, Ben Arous", "latitude": 36.7260, "longitude": 10.2980},
+        {"name": "Universal Gym (Ezzahra)", "address": "Avenue Habib Bourguiba, Ezzahra, Ben Arous", "latitude": 36.7420, "longitude": 10.3080},
+        {"name": "Top Body Gym (Mourouj 3)", "address": "Avenue des Martyrs, El Mourouj 3, Ben Arous", "latitude": 36.7310, "longitude": 10.2110},
+        {"name": "Hammam Lif Iron Club", "address": "Corniche Hammam-Lif, Ben Arous", "latitude": 36.7330, "longitude": 10.3400},
+
+        # --- Manouba ---
+        {"name": "Delys Fitness (Manouba Centre)", "address": "Avenue Habib Bourguiba, Manouba", "latitude": 36.8080, "longitude": 10.0980},
+        {"name": "Sparta Fitness Gym (Denden)", "address": "Rue de l'Indépendance, Denden, Manouba", "latitude": 36.8040, "longitude": 10.1150},
+        {"name": "Oussama Gym (Oued Ellil)", "address": "Route de Mateur, Oued Ellil, Manouba", "latitude": 36.8290, "longitude": 10.0470},
+
+        # --- Bizerte ---
+        {"name": "California Gym (Bizerte)", "address": "Boulevard Hassan Nouri, Bizerte", "latitude": 37.2745, "longitude": 9.8739},
+        {"name": "Marina Fitness Club (Bizerte)", "address": "Port de Plaisance Cap 3000, Bizerte", "latitude": 37.2710, "longitude": 9.8790},
+        {"name": "Viking Gym (Menzel Bourguiba)", "address": "Avenue de la République, Menzel Bourguiba, Bizerte", "latitude": 37.1530, "longitude": 9.7860},
+        {"name": "Ras Jebel Powerhouse", "address": "Avenue Habib Thameur, Ras Jebel, Bizerte", "latitude": 37.2140, "longitude": 10.1220},
+
+        # --- Nabeul & Hammamet ---
+        {"name": "California Gym (Nabeul)", "address": "Avenue Habib Thameur, Nabeul", "latitude": 36.4560, "longitude": 10.7376},
+        {"name": "Hammamet Fitness Center", "address": "Zone Touristique Nord, Hammamet", "latitude": 36.4080, "longitude": 10.6070},
+        {"name": "Yasmine Gym (Hammamet Sud)", "address": "Port Yasmine Hammamet, Hammamet", "latitude": 36.3720, "longitude": 10.5360},
+        {"name": "Kelibia Ocean Gym", "address": "Avenue des Martyrs, Kélibia, Nabeul", "latitude": 36.8480, "longitude": 11.0930},
+        {"name": "Grombalia Fit Center", "address": "Avenue Habib Bourguiba, Grombalia, Nabeul", "latitude": 36.6010, "longitude": 10.4980},
+
+        # --- Sousse ---
+        {"name": "Pro Fitness (Sousse)", "address": "Route Touristique, Sousse", "latitude": 35.8256, "longitude": 10.6369},
+        {"name": "California Gym (Mall of Sousse)", "address": "Kalâa Kebira, Sousse", "latitude": 35.8690, "longitude": 10.5780},
+        {"name": "Gold Gym (Kantaoui)", "address": "Port El Kantaoui, Hammam Sousse, Sousse", "latitude": 35.8920, "longitude": 10.5980},
+        {"name": "Powerhouse Gym (Sahloul)", "address": "Boulevard Yasser Arafat, Sahloul, Sousse", "latitude": 35.8390, "longitude": 10.6020},
+        {"name": "Body Art Gym (Khezama)", "address": "Avenue Taieb Mhiri, Khezama Ouest, Sousse", "latitude": 35.8450, "longitude": 10.6210},
+
+        # --- Monastir & Mahdia ---
+        {"name": "Monastir Marina Gym Club", "address": "Marina de Monastir, Monastir", "latitude": 35.7780, "longitude": 10.8330},
+        {"name": "California Gym (Monastir)", "address": "Avenue de l'Environnement, Monastir", "latitude": 35.7640, "longitude": 10.8170},
+        {"name": "Cap Afrique Fitness (Mahdia)", "address": "Zone Touristique Hiboun, Mahdia", "latitude": 35.5180, "longitude": 11.0490},
+
+        # --- Sfax ---
+        {"name": "California Gym (Sfax)", "address": "Route de Teniour Km 1.5, Sfax", "latitude": 34.7406, "longitude": 10.7603},
+        {"name": "California Gym (Sfax Gremda)", "address": "Route de Gremda Km 2, Sfax", "latitude": 34.7520, "longitude": 10.7420},
+        {"name": "Matrix Gym (Route de Soukra)", "address": "Route de Soukra Km 3, Sfax", "latitude": 34.7210, "longitude": 10.7310},
+        {"name": "Platinum Fitness Club (Sfax Centre)", "address": "Boulevard 14 Janvier, Sfax", "latitude": 34.7350, "longitude": 10.7620},
+
+        # --- Central & South Tunisia ---
+        {"name": "Okba Fitness Club (Kairouan)", "address": "Avenue Ali Zouaoui, Kairouan", "latitude": 35.6780, "longitude": 10.0960},
+        {"name": "Oasis Fit (Gabès)", "address": "Boulevard Mohamed Ali, Gabès", "latitude": 33.8815, "longitude": 10.0982},
+        {"name": "Djerba Sun Gym (Midoun)", "address": "Zone Touristique Midoun, Djerba", "latitude": 33.8075, "longitude": 11.0025},
+        {"name": "Houmt Souk Iron Fitness (Djerba)", "address": "Avenue Habib Bourguiba, Houmt Souk, Djerba", "latitude": 33.8760, "longitude": 10.8580},
+        {"name": "Zarzis Coast Gym", "address": "Route Touristique Souihel, Zarzis", "latitude": 33.5180, "longitude": 11.1120}
+    ]
+
+    try:
+        with conn.cursor() as cur:
+            for g in gym_list:
+                cur.execute(
+                    """
+                    INSERT INTO gyms (name, address, latitude, longitude) 
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (name) DO UPDATE 
+                    SET address = EXCLUDED.address, latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude
+                    """,
+                    (g["name"], g["address"], g["latitude"], g["longitude"])
+                )
+
+            # Fetch all coach IDs
+            cur.execute("SELECT id FROM users WHERE role = 'coach'")
+            coaches = [r["id"] for r in cur.fetchall()]
+
+            if coaches:
+                cur.execute("SELECT id FROM gyms ORDER BY id ASC")
+                gym_ids = [r["id"] for r in cur.fetchall()]
+
+                # Distribute coaches evenly across gyms so all gyms have affiliated coaches
+                for i, g_id in enumerate(gym_ids):
+                    primary_coach = coaches[i % len(coaches)]
+                    secondary_coach = coaches[(i + 3) % len(coaches)]
+                    
+                    cur.execute(
+                        "INSERT INTO coach_gyms (coach_id, gym_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                        (primary_coach, g_id)
+                    )
+                    cur.execute(
+                        "INSERT INTO coach_gyms (coach_id, gym_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                        (secondary_coach, g_id)
+                    )
+
+            conn.commit()
+            print(f"[SEED] Successfully verified and seeded {len(gym_list)} gyms across Tunisia with coach affiliations.", flush=True)
+    except Exception as e:
+        conn.rollback()
+        print(f"[SEED] Gym seed warning: {e}", flush=True)
 
 
 def seed_default_admin(conn):

@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../utils/auth";
+import { useTheme } from "../../utils/theme";
 import OrbThemeSwitcher from "./OrbThemeSwitcher";
+import NotificationCenter from "./NotificationCenter";
 import { SUB_NAV } from "./IdentityPanel";
 import {
   Compass, Search, LayoutDashboard, Sparkles, Dumbbell, Flame,
   BookOpen, Trophy, Dna, Utensils, Moon, Activity, Camera,
-  ShieldAlert, Users, Calendar, ChevronRight, X
+  ShieldAlert, Users, Calendar, ChevronRight, X, ShieldCheck, Flag, FileText
 } from "lucide-react";
 
 /* ── Global Search Sections Database ── */
@@ -46,15 +49,43 @@ const SEARCH_DATABASE = [
   },
 ];
 
+const ADMIN_SEARCH_DATABASE = [
+  {
+    category: "Admin Management",
+    items: [
+      { label: "Admin Overview", sub: "System Metrics & Analytics", path: "/admin", Icon: LayoutDashboard },
+      { label: "Coach Verifications", sub: "Review & Audit Credentials", path: "/admin?tab=verifications", Icon: ShieldCheck },
+      { label: "User Management", sub: "Moderation & Suspensions", path: "/admin?tab=users", Icon: Users },
+      { label: "Reports Inbox", sub: "Coach & Bug Reports", path: "/admin?tab=reports", Icon: Flag },
+      { label: "Audit Log", sub: "Administrative Actions Trail", path: "/admin?tab=audit", Icon: FileText },
+    ],
+  },
+];
+
+const ADMIN_CHIPS = [
+  { label: "Overview", path: "/admin", tab: "overview" },
+  { label: "Coach Verifications", path: "/admin?tab=verifications", tab: "verifications" },
+  { label: "User Management", path: "/admin?tab=users", tab: "users" },
+  { label: "Reports Inbox", path: "/admin?tab=reports", tab: "reports" },
+  { label: "Audit Log", path: "/admin?tab=audit", tab: "audit" },
+];
+
 export default function MainHeader() {
+  const { user } = useAuth();
+  const { theme, previewTheme } = useTheme();
+  const activeTheme = previewTheme || theme;
+  const iconColor = activeTheme === 'monochrome' ? '#ffffff' : activeTheme === 'dark' ? '#38bdf8' : '#0ea5e9';
   const location = useLocation();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const searchContainerRef = useRef(null);
 
+  const isAdmin = user?.role === "admin" || user?.profile?.role === "admin";
+
   // Determine current active section & subnav chips
   const activeSectionKey = (() => {
+    if (isAdmin) return "admin";
     const p = location.pathname;
     if (p === "/" || p.startsWith("/recommend")) return "command";
     if (["/workouts", "/log", "/exercises", "/challenges"].some((s) => p.startsWith(s))) return "performance";
@@ -63,7 +94,7 @@ export default function MainHeader() {
     return "command";
   })();
 
-  const chips = SUB_NAV[activeSectionKey] || [];
+  const chips = isAdmin ? ADMIN_CHIPS : (SUB_NAV[activeSectionKey] || []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -91,13 +122,14 @@ export default function MainHeader() {
     setIsOpen(false);
   };
 
+  const activeDatabase = isAdmin ? ADMIN_SEARCH_DATABASE : SEARCH_DATABASE;
+
   // Filter sections by search query
-  const filteredSections = SEARCH_DATABASE.map((sec) => {
+  const filteredSections = activeDatabase.map((sec) => {
     const matchingItems = sec.items.filter(
       (item) =>
         item.label.toLowerCase().includes(query.toLowerCase()) ||
-        item.sub.toLowerCase().includes(query.toLowerCase()) ||
-        sec.category.toLowerCase().includes(query.toLowerCase())
+        item.sub.toLowerCase().includes(query.toLowerCase())
     );
     return { ...sec, items: matchingItems };
   }).filter((sec) => sec.items.length > 0);
@@ -105,10 +137,13 @@ export default function MainHeader() {
   return (
     <header className="main-header-bar">
       <div className="main-header-left">
-        <div className="main-header-title-box">
-          <Compass size={18} color="#0ea5e9" />
-          <span className="main-header-title">
-            {activeSectionKey === "command"
+        {/* Active Section Indicator */}
+        <div className="main-section-badge">
+          <Compass size={14} color={iconColor} />
+          <span className="main-section-badge-text">
+            {isAdmin
+              ? "Platform Administration"
+              : activeSectionKey === "command"
               ? "Command Center"
               : activeSectionKey === "performance"
               ? "Training Hub"
@@ -121,10 +156,12 @@ export default function MainHeader() {
         {/* Sub-Navigation Chips */}
         <div className="main-chips-row">
           {chips.map((chip) => {
-            const isActive =
-              chip.path === "/"
-                ? location.pathname === "/"
-                : location.pathname.startsWith(chip.path);
+            const isActive = isAdmin
+              ? (chip.tab === "overview" && (!location.search || location.search.includes("tab=overview"))) ||
+                (location.search && location.search.includes(`tab=${chip.tab}`))
+              : chip.path === "/"
+              ? location.pathname === "/"
+              : location.pathname.startsWith(chip.path);
             return (
               <NavLink
                 key={chip.path}
@@ -142,7 +179,7 @@ export default function MainHeader() {
         {/* Interactive Search Bar & Autocomplete Dropdown */}
         <div className="main-search-wrapper" ref={searchContainerRef}>
           <div className="main-search-pill">
-            <Search size={14} color="#0ea5e9" style={{ flexShrink: 0 }} />
+            <Search size={14} color={iconColor} style={{ flexShrink: 0 }} />
             <input
               type="text"
               placeholder="Search sections & apps..."
@@ -194,7 +231,7 @@ export default function MainHeader() {
                           onClick={() => handleSelectResult(item.path)}
                         >
                           <div className="main-search-item-icon">
-                            <item.Icon size={16} color="#0ea5e9" />
+                            <item.Icon size={16} color={iconColor} />
                           </div>
                           <div className="main-search-item-info">
                             <div className="main-search-item-label">{item.label}</div>
@@ -213,6 +250,11 @@ export default function MainHeader() {
               )}
             </div>
           )}
+        </div>
+
+        {/* Notifications Center */}
+        <div className="main-notif-wrapper" style={{ display: "flex", alignItems: "center" }}>
+          <NotificationCenter />
         </div>
 
         {/* Orb Theme Switcher */}

@@ -379,7 +379,21 @@ export const admin = {
     params.append("limit", String(limit));
     return req(`/admin/users?${params.toString()}`);
   },
-  suspendUser: (id, reason) => req(`/admin/users/${id}/suspend`, { method: "POST", body: JSON.stringify({ reason }) }),
+  suspendUser: (id, reason, duration_days = null, suspended_until = null) =>
+    req(`/admin/users/${id}/suspend`, {
+      method: "POST",
+      body: JSON.stringify({ reason, duration_days, suspended_until })
+    }),
+  contactUser: (id, subject, message) =>
+    req(`/admin/users/${id}/contact`, {
+      method: "POST",
+      body: JSON.stringify({ subject, message })
+    }),
+  contactCoachReport: (reportId, subject, message) =>
+    req(`/admin/reports/${reportId}/contact-coach`, {
+      method: "POST",
+      body: JSON.stringify({ subject, message })
+    }),
   reinstateUser: (id) => req(`/admin/users/${id}/reinstate`, { method: "POST" }),
   getReports: (type = "", status = "", page = 1, limit = 20) => {
     const params = new URLSearchParams();
@@ -409,6 +423,8 @@ export const reports = {
   submitBugReport: (category, description, screenshot_url = null, app_context = null) =>
     req("/reports/bug", { method: "POST", body: JSON.stringify({ category, description, screenshot_url, app_context }) }),
   getMyReports: () => req("/reports/mine"),
+  replyToInquiry: (reportId, reply) =>
+    req(`/reports/${reportId}/inquiry-reply`, { method: "POST", body: JSON.stringify({ reply }) }),
 };
 
 

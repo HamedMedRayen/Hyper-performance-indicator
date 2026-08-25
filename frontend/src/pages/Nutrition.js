@@ -697,10 +697,6 @@ export default function Nutrition() {
                   onChange={(e) => setScanText(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleScanText(); }}
                 />
-                value={scanText}
-                onChange={(e) => setScanText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleScanText(); }}
-                />
                 <button
                   onClick={handleScanText}
                   disabled={scanningText}

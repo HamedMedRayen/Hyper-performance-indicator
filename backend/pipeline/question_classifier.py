@@ -49,7 +49,9 @@ def classify_question(question: str) -> QuestionType:
     """
     try:
         client = get_groq_client()
-        completion = client.chat.completions.create(
+        from services.llm_service import create_groq_chat_completion
+        completion = create_groq_chat_completion(
+            client=client,
             model=CLASSIFICATION_MODEL,
             messages=[
                 {
