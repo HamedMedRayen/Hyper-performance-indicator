@@ -16,12 +16,7 @@ import RequireCoachRole from "../components/auth/RequireCoachRole";
 import CoachWorkspaceNav from "../components/coach/CoachWorkspaceNav";
 import ScheduleSection from "../components/coach/ScheduleSection";
 import AiReportsSection from "../components/coach/AiReportsSection";
-import EventsSection from "../components/coach/EventsSection";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
-// Expose L globally for map initialization code
-if (!window.L) window.L = L;
+import L from "../utils/leafletSetup";
 
 const GOAL_LABELS = {
   muscle_gain: "Muscle Gain & Hypertrophy",
@@ -127,8 +122,53 @@ export default function CoachDashboard() {
   };
 
   const renderCoachOnboarding = () => {
-    const isApproved = profile?.approved || profile?.coach_verified || profile?.verification_status === "approved";
-    const isPending = profile?.verification_status === "pending" || (!isApproved && profile?.cv_url);
+    const isSuspended = profile?.is_suspended || user?.is_suspended || user?.profile?.is_suspended;
+    const suspensionReason = profile?.suspension_reason || user?.suspension_reason || user?.profile?.suspension_reason || "Violation of coaching guidelines";
+    const suspendedUntil = profile?.suspended_until || user?.suspended_until || user?.profile?.suspended_until;
+
+    if (isSuspended) {
+      return (
+        <div style={{
+          background: "rgba(239, 68, 68, 0.08)", border: "1.5px solid rgba(239, 68, 68, 0.4)", borderRadius: 28,
+          padding: 40, maxWidth: 640, margin: "40px auto", textAlign: "center",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.5)", backdropFilter: "blur(16px)"
+        }}>
+          <div style={{
+            background: "rgba(239, 68, 68, 0.15)", border: "1px solid rgba(239, 68, 68, 0.3)",
+            width: 80, height: 80, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 24px", color: "#ef4444"
+          }}>
+            <ShieldAlert size={44} />
+          </div>
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: "#fff", margin: "0 0 12px" }}>
+            {suspendedUntil ? "Coach Account Temporarily Suspended" : "Coach Account Suspended"}
+          </h2>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: "rgba(239, 68, 68, 0.2)", border: "1px solid rgba(239, 68, 68, 0.4)",
+            padding: "6px 16px", borderRadius: 20, color: "#f87171", fontSize: 13, fontWeight: 800, marginBottom: 20
+          }}>
+            {suspendedUntil ? `Temporarily suspended until ${new Date(suspendedUntil).toLocaleDateString()}` : "Indefinite Suspension"}
+          </div>
+          <p style={{ fontSize: 14, color: "var(--color-text-2)", lineHeight: 1.6, margin: "0 0 20px" }}>
+            Your coach profile is currently hidden from athlete discovery and client interactions are paused due to an administrative suspension.
+          </p>
+          <div style={{
+            background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16,
+            padding: 20, textAlign: "left", display: "flex", flexDirection: "column", gap: 8
+          }}>
+            <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", fontWeight: 700 }}>Stated Reason for Suspension:</div>
+            <div style={{ fontSize: 14, color: "#fff", fontWeight: 600 }}>{suspensionReason}</div>
+          </div>
+          <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 20 }}>
+            If you have questions or wish to appeal this action, please review any official inquiry messages in your notifications center or contact platform administration.
+          </p>
+        </div>
+      );
+    }
+
+    const isApproved = profile?.verification_status === "approved" || (!profile?.verification_status && (profile?.approved || profile?.coach_verified));
+    const isPending = profile?.verification_status === "pending" || (!isApproved && Boolean(profile?.cv_url));
     const isRejected = profile?.verification_status === "rejected";
 
     if (isPending) {
@@ -369,11 +409,15 @@ export default function CoachDashboard() {
 
   const REGIONS = {
     all: { name: "All Tunisia", lat: 36.8065, lng: 10.1815 },
-    tunis: { name: "Tunis", lat: 36.8065, lng: 10.1815 },
-    ben_arous: { name: "Ben Arous", lat: 36.7533, lng: 10.2223 },
+    tunis: { name: "Tunis", lat: 36.8350, lng: 10.2300 },
     ariana: { name: "Ariana", lat: 36.8625, lng: 10.1956 },
-    sousse: { name: "Sousse", lat: 35.8256, lng: 10.6369 },
-    sfax: { name: "Sfax", lat: 34.7406, lng: 10.7603 }
+    ben_arous: { name: "Ben Arous", lat: 36.7533, lng: 10.2223 },
+    manouba: { name: "Manouba", lat: 36.8080, lng: 10.0980 },
+    bizerte: { name: "Bizerte", lat: 37.2745, lng: 9.8739 },
+    nabeul: { name: "Nabeul / Hammamet", lat: 36.4560, lng: 10.7376 },
+    sousse: { name: "Sousse / Sahel", lat: 35.8256, lng: 10.6369 },
+    sfax: { name: "Sfax", lat: 34.7406, lng: 10.7603 },
+    south: { name: "Djerba & South", lat: 33.8075, lng: 10.9925 }
   };
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -559,11 +603,16 @@ export default function CoachDashboard() {
       clearTimeout(timer3);
       if (mapRef.current) {
         try {
-          mapRef.current.remove();
+          mapRef.current.stop?.();
+          mapRef.current.off?.();
+          mapRef.current.remove?.();
         } catch (err) {
           console.error("Error cleaning up map:", err);
         }
         mapRef.current = null;
+      }
+      if (container && container._leaflet_id) {
+        container._leaflet_id = null;
       }
     };
   }, [mapLoaded, gyms, selectedRegion, activeTab, selectedGoal]);
@@ -1906,8 +1955,8 @@ export default function CoachDashboard() {
   const browseCoaches = coaches.filter(c => !c.status || c.status === 'declined');
   const isCoachUser = user?.role === 'coach' || user?.profile?.role === 'coach' || role === 'coach';
   const isCoachApproved = profile
-    ? Boolean(profile.approved || profile.coach_verified || profile.verification_status === "approved")
-    : Boolean(user?.approved || user?.coach_verified || user?.verification_status === "approved");
+    ? Boolean(profile.verification_status === "approved" || (!profile.verification_status && (profile.approved || profile.coach_verified)))
+    : Boolean(user?.verification_status === "approved" || (!user?.verification_status && (user?.approved || user?.coach_verified)));
 
   return (
     <div style={{ minHeight: "100vh", paddingBottom: 60, background: "var(--color-bg)", paddingTop: 24 }}>
@@ -2291,9 +2340,9 @@ export default function CoachDashboard() {
                               setUserLoc({ lat: reg.lat, lng: reg.lng });
                             }}
                             style={{
-                              background: isSelected ? "var(--aura-cyan)" : "rgba(255,255,255,0.03)",
-                              color: isSelected ? "#000" : "var(--color-text-2)",
-                              border: isSelected ? "1px solid var(--aura-cyan)" : "1px solid var(--border-card)",
+                              background: isSelected ? "var(--aura-cyan, #06b6d4)" : "rgba(255, 255, 255, 0.05)",
+                              color: isSelected ? "#090e17" : "var(--color-text, #f8fafc)",
+                              border: isSelected ? "1px solid var(--aura-cyan, #06b6d4)" : "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
                               padding: "8px 18px",
                               borderRadius: 12,
                               fontSize: 12,
@@ -2301,13 +2350,19 @@ export default function CoachDashboard() {
                               cursor: "pointer",
                               whiteSpace: "nowrap",
                               transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                              boxShadow: isSelected ? "0 0 12px rgba(6, 182, 212, 0.3)" : "none"
+                              boxShadow: isSelected ? "0 0 16px rgba(6, 182, 212, 0.45)" : "none"
                             }}
                             onMouseEnter={e => {
-                              if (!isSelected) e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                              if (!isSelected) {
+                                e.currentTarget.style.background = "rgba(255, 255, 255, 0.12)";
+                                e.currentTarget.style.color = "#ffffff";
+                              }
                             }}
                             onMouseLeave={e => {
-                              if (!isSelected) e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                              if (!isSelected) {
+                                e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                                e.currentTarget.style.color = "var(--color-text, #f8fafc)";
+                              }
                             }}
                           >
                             {reg.name}
@@ -2320,9 +2375,9 @@ export default function CoachDashboard() {
                       value={selectedGoal}
                       onChange={(e) => setSelectedGoal(e.target.value)}
                       style={{
-                        background: "rgba(255,255,255,0.03)",
-                        color: "var(--color-text)",
-                        border: "1px solid var(--border-card)",
+                        background: "rgba(255, 255, 255, 0.05)",
+                        color: "var(--color-text, #f8fafc)",
+                        border: "1px solid var(--border-card, rgba(255, 255, 255, 0.1))",
                         padding: "8px 16px",
                         borderRadius: 12,
                         fontSize: 12,
@@ -2332,9 +2387,9 @@ export default function CoachDashboard() {
                         minWidth: 160
                       }}
                     >
-                      <option value="all" style={{ background: "#111" }}>All Specialties</option>
+                      <option value="all" style={{ background: "#0f172a", color: "#ffffff" }}>All Specialties</option>
                       {Object.entries(GOAL_LABELS).map(([key, label]) => (
-                        <option key={key} value={key} style={{ background: "#111" }}>{label}</option>
+                        <option key={key} value={key} style={{ background: "#0f172a", color: "#ffffff" }}>{label}</option>
                       ))}
                     </select>
                   </div>
@@ -2613,16 +2668,30 @@ export default function CoachDashboard() {
                           </div>
                         </div>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleHireCoach(c.coach_id);
-                          }}
-                          className="btn-primary"
-                          style={{ padding: "6px 16px", borderRadius: 10, fontSize: 12, fontWeight: 700, width: "auto" }}
-                        >
-                          Hire
-                        </button>
+                        {c.is_suspended ? (
+                          <span style={{
+                            background: "rgba(239, 68, 68, 0.15)",
+                            border: "1px solid rgba(239, 68, 68, 0.3)",
+                            color: "#f87171",
+                            fontSize: 11,
+                            fontWeight: 800,
+                            padding: "6px 12px",
+                            borderRadius: 10
+                          }}>
+                            {c.suspended_until ? `Suspended (${new Date(c.suspended_until).toLocaleDateString()})` : "Suspended"}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleHireCoach(c.coach_id);
+                            }}
+                            className="btn-primary"
+                            style={{ padding: "6px 16px", borderRadius: 10, fontSize: 12, fontWeight: 700, width: "auto" }}
+                          >
+                            Hire
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -2815,9 +2884,9 @@ export default function CoachDashboard() {
                     borderRadius: 10, padding: "8px 12px", fontSize: 13, outline: "none", cursor: "pointer"
                   }}
                 >
-                  <option value="on_track" style={{ background: "#111" }}>🟢 On Track & Advancing</option>
-                  <option value="needs_focus" style={{ background: "#111" }}>🟡 Needs Adjustment / Focus</option>
-                  <option value="off_track" style={{ background: "#111" }}>🔴 Off Track / Critical Review</option>
+                  <option value="on_track" style={{ background: "#111" }}>On Track & Advancing</option>
+                  <option value="needs_focus" style={{ background: "#111" }}>Needs Adjustment / Focus</option>
+                  <option value="off_track" style={{ background: "#111" }}>Off Track / Critical Review</option>
                 </select>
               </div>
 

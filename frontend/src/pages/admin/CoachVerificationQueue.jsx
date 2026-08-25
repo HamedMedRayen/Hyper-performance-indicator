@@ -30,7 +30,6 @@ export default function CoachVerificationQueue() {
 
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [showRejectModal, setShowRejectModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Groq AI Review state
@@ -104,7 +103,6 @@ export default function CoachVerificationQueue() {
     setActionLoading(true);
     try {
       await admin.rejectVerification(selectedVerification.id, rejectReason.trim());
-      setShowRejectModal(false);
       setRejectReason("");
       setSelectedVerification(null);
       loadQueue(data.page);
@@ -295,10 +293,7 @@ export default function CoachVerificationQueue() {
                               Approve
                             </button>
                             <button
-                              onClick={() => {
-                                setSelectedVerification(row);
-                                setShowRejectModal(true);
-                              }}
+                              onClick={() => loadDetail(row)}
                               disabled={actionLoading}
                               style={{
                                 padding: "6px 12px",
@@ -325,385 +320,404 @@ export default function CoachVerificationQueue() {
         </table>
       </div>
 
-      {/* Detail Side Drawer / Modal */}
-      {selectedVerification && !showRejectModal && (
+      {/* Side-by-Side Coach Verification Review Workspace */}
+      {selectedVerification && (
         <div className="modal-overlay" onClick={() => setSelectedVerification(null)} style={{ zIndex: 9999 }}>
           <div
             className="modal-card"
             onClick={(e) => e.stopPropagation()}
             style={{
-              maxWidth: 600,
-              width: "90%",
-              maxHeight: "85vh",
+              maxWidth: 1040,
+              width: "95%",
+              maxHeight: "88vh",
               overflowY: "auto",
               padding: 24,
               borderRadius: 20,
-              background: "rgba(15, 23, 42, 0.95)",
-              backdropFilter: "blur(20px)",
+              background: "rgba(15, 23, 42, 0.98)",
+              backdropFilter: "blur(24px)",
               border: "1px solid rgba(255, 255, 255, 0.12)",
-              color: "#fff"
+              color: "#fff",
+              display: "flex",
+              flexDirection: "column",
+              gap: 16
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Coach Verification Details</h3>
-                <div style={{ fontSize: 12, color: "#94a3b8" }}>ID #{selectedVerification.id}</div>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: "rgba(14, 165, 233, 0.2)",
+                    border: "1px solid rgba(14, 165, 233, 0.4)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#38bdf8"
+                  }}
+                >
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>Coach Verification #{selectedVerification.id}</h3>
+                    <span
+                      style={{
+                        padding: "2px 8px",
+                        borderRadius: 6,
+                        fontSize: 10,
+                        fontWeight: 800,
+                        textTransform: "uppercase",
+                        background:
+                          selectedVerification.status === "approved"
+                            ? "rgba(34, 197, 94, 0.2)"
+                            : selectedVerification.status === "rejected"
+                            ? "rgba(239, 68, 68, 0.2)"
+                            : "rgba(245, 158, 11, 0.2)",
+                        color:
+                          selectedVerification.status === "approved"
+                            ? "#4ade80"
+                            : selectedVerification.status === "rejected"
+                            ? "#f87171"
+                            : "#fbbf24"
+                      }}
+                    >
+                      {selectedVerification.status}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>
+                    Submitted {selectedVerification.submitted_at ? new Date(selectedVerification.submitted_at).toLocaleDateString() : "N/A"}
+                  </div>
+                </div>
               </div>
               <button
                 onClick={() => setSelectedVerification(null)}
-                style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer" }}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center" }}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Coach Profile & Contact */}
-              <div style={{ padding: 16, background: "rgba(255, 255, 255, 0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 12,
-                      background: "rgba(14, 165, 233, 0.2)",
-                      border: "1px solid rgba(14, 165, 233, 0.4)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 18,
-                      fontWeight: 800,
-                      color: "#38bdf8"
-                    }}
-                  >
-                    {selectedVerification.coach_name?.charAt(0).toUpperCase()}
+            {/* Side-by-Side Content Grid */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1.1fr 1fr",
+                gap: 20,
+                alignItems: "start"
+              }}
+            >
+              {/* LEFT COLUMN: Coach Profile & Uploaded Documents */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* Coach Profile Card */}
+                <div style={{ padding: 14, background: "rgba(255, 255, 255, 0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div
+                      style={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: 12,
+                        background: "rgba(14, 165, 233, 0.2)",
+                        border: "1px solid rgba(14, 165, 233, 0.4)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: "#38bdf8"
+                      }}
+                    >
+                      {selectedVerification.coach_name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>{selectedVerification.coach_name}</div>
+                      <div style={{ fontSize: 12, color: "#38bdf8" }}>{selectedVerification.coach_email}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>{selectedVerification.coach_name}</div>
-                    <div style={{ fontSize: 13, color: "#38bdf8" }}>{selectedVerification.coach_email}</div>
-                  </div>
-                </div>
-                <div style={{ fontSize: 11, color: "#64748b", marginTop: 8 }}>
-                  Submitted on: {selectedVerification.submitted_at ? new Date(selectedVerification.submitted_at).toLocaleString() : "N/A"}
-                </div>
-              </div>
 
-              {/* Submitted Questionnaire Answers */}
-              <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 16 }}>
-                <h4 style={{ fontSize: 13, fontWeight: 800, color: "#38bdf8", textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 12px 0" }}>
-                  Submitted Questionnaire & Qualifications
-                </h4>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>Primary Specialty</div>
-                    <div style={{ fontSize: 13, color: "#fff", fontWeight: 600 }}>
-                      {GOAL_LABELS[selectedVerification.coach_goal?.toLowerCase()] || selectedVerification.coach_goal || "General Fitness"}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase" }}>Specialty</div>
+                      <div style={{ fontSize: 12, color: "#fff", fontWeight: 600 }}>
+                        {GOAL_LABELS[selectedVerification.coach_goal?.toLowerCase()] || selectedVerification.coach_goal || "General Fitness"}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase" }}>Experience</div>
+                      <div style={{ fontSize: 12, color: "#fff", fontWeight: 600 }}>
+                        {EXP_LABELS[selectedVerification.coach_experience?.toLowerCase()] || selectedVerification.coach_experience || "Certified Instructor"}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase" }}>Age / Sex</div>
+                      <div style={{ fontSize: 12, color: "#fff", fontWeight: 600 }}>
+                        {selectedVerification.coach_age ? `${selectedVerification.coach_age} yrs` : "N/A"} / {selectedVerification.coach_sex === 'M' ? 'Male' : selectedVerification.coach_sex === 'F' ? 'Female' : 'N/A'}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>Experience Level</div>
-                    <div style={{ fontSize: 13, color: "#fff", fontWeight: 600 }}>
-                      {EXP_LABELS[selectedVerification.coach_experience?.toLowerCase()] || selectedVerification.coach_experience || "Certified Instructor"}
+
+                  {selectedVerification.coach_bio && (
+                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8, marginTop: 8 }}>
+                      <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>Bio Statement</div>
+                      <div style={{ fontSize: 12, color: "#cbd5e1", lineHeight: 1.4, maxHeight: 80, overflowY: "auto" }}>
+                        {selectedVerification.coach_bio}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>Age / Sex</div>
-                    <div style={{ fontSize: 13, color: "#fff", fontWeight: 600 }}>
-                      {selectedVerification.coach_age ? `${selectedVerification.coach_age} yrs` : "N/A"} / {selectedVerification.coach_sex === 'M' ? 'Male' : selectedVerification.coach_sex === 'F' ? 'Female' : 'N/A'}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700 }}>Status</div>
-                    <div style={{ fontSize: 13, color: selectedVerification.status === 'approved' ? '#4ade80' : selectedVerification.status === 'rejected' ? '#f87171' : '#fbbf24', fontWeight: 800, textTransform: 'uppercase' }}>
-                      {selectedVerification.status}
-                    </div>
-                  </div>
+                  )}
                 </div>
 
-                {selectedVerification.coach_bio && (
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
-                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, marginBottom: 4 }}>Bio / Personal Statement</div>
-                    <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.5 }}>
-                      {selectedVerification.coach_bio}
-                    </div>
+                {/* Uploaded Documents Preview */}
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#94a3b8", textTransform: "uppercase", marginBottom: 8 }}>
+                    Submitted CV & Documentation
                   </div>
-                )}
-
-                {selectedVerification.coach_onboarding && Object.keys(selectedVerification.coach_onboarding).length > 0 && (
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10, marginTop: 10 }}>
-                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, marginBottom: 6 }}>Additional Onboarding Q&A</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {Object.entries(selectedVerification.coach_onboarding).map(([k, v]) => (
-                        <div key={k} style={{ fontSize: 12, color: "#cbd5e1" }}>
-                          <strong style={{ color: "#94a3b8" }}>{k.replace(/_/g, " ")}:</strong> {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                  {(!selectedVerification.document_urls || selectedVerification.document_urls.length === 0) ? (
+                    <div style={{ fontSize: 12, color: "#64748b" }}>No document files uploaded.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {selectedVerification.document_urls.map((url, idx) => (
+                        <div key={idx} style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: 10 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "#38bdf8" }}>Document #{idx + 1}</span>
+                            <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#38bdf8", display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+                              Open Document <ExternalLink size={12} />
+                            </a>
+                          </div>
+                          {isImage(url) ? (
+                            <img
+                              src={url}
+                              alt={`Doc ${idx + 1}`}
+                              style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 6, background: "#000" }}
+                            />
+                          ) : (
+                            <iframe
+                              src={url}
+                              title={`Doc ${idx + 1}`}
+                              style={{ width: "100%", height: 200, border: "none", borderRadius: 6, background: "#fff" }}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
-              {/* Groq AI Verification Review Panel */}
-              <div style={{
-                background: "linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%)",
-                border: "1px solid rgba(168, 85, 247, 0.3)",
-                borderRadius: 14,
-                padding: 16
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#c084fc", fontWeight: 800, fontSize: 14 }}>
-                    <Sparkles size={16} /> Groq AI Compliance Review
+              {/* RIGHT COLUMN: AI Compliance & Direct Action Decision Suite */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* Groq AI Compliance Review */}
+                <div style={{
+                  background: "linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%)",
+                  border: "1px solid rgba(168, 85, 247, 0.3)",
+                  borderRadius: 14,
+                  padding: 14
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#c084fc", fontWeight: 800, fontSize: 13 }}>
+                      <Sparkles size={15} /> Groq AI Credential Audit
+                    </div>
+                    <button
+                      onClick={() => fetchAiReview(selectedVerification.id)}
+                      disabled={aiLoading}
+                      style={{
+                        background: "rgba(255,255,255,0.08)",
+                        border: "none",
+                        color: "#c084fc",
+                        borderRadius: 6,
+                        padding: "3px 8px",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4
+                      }}
+                    >
+                      <RefreshCw size={11} className={aiLoading ? "spin" : ""} /> {aiLoading ? "Analyzing..." : "Re-evaluate"}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => fetchAiReview(selectedVerification.id)}
-                    disabled={aiLoading}
-                    style={{
-                      background: "rgba(255,255,255,0.08)",
-                      border: "none",
-                      color: "#c084fc",
-                      borderRadius: 8,
-                      padding: "4px 8px",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4
-                    }}
-                  >
-                    <RefreshCw size={12} className={aiLoading ? "spin" : ""} /> {aiLoading ? "Analyzing..." : "Re-evaluate"}
-                  </button>
+
+                  {aiLoading ? (
+                    <div style={{ fontSize: 12, color: "#cbd5e1", padding: "10px 0", textAlign: "center" }}>
+                      <Brain size={20} style={{ margin: "0 auto 6px", display: "block", color: "#c084fc" }} />
+                      Evaluating credentials & qualifications...
+                    </div>
+                  ) : aiError ? (
+                    <div style={{ fontSize: 11, color: "#f87171" }}>{aiError}</div>
+                  ) : aiReview ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span
+                          style={{
+                            padding: "3px 8px",
+                            borderRadius: 6,
+                            fontSize: 10,
+                            fontWeight: 900,
+                            background:
+                              aiReview.recommendation === "APPROVE"
+                                ? "rgba(34, 197, 94, 0.2)"
+                                : aiReview.recommendation === "REJECT"
+                                ? "rgba(239, 68, 68, 0.2)"
+                                : "rgba(245, 158, 11, 0.2)",
+                            color:
+                              aiReview.recommendation === "APPROVE"
+                                ? "#4ade80"
+                                : aiReview.recommendation === "REJECT"
+                                ? "#f87171"
+                                : "#fbbf24"
+                          }}
+                        >
+                          RECOMMENDATION: {aiReview.recommendation}
+                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: "#c084fc" }}>
+                          Score: {aiReview.score}/100
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: 12, color: "#e2e8f0", lineHeight: 1.4 }}>
+                        {aiReview.summary}
+                      </div>
+
+                      {aiReview.strengths && aiReview.strengths.length > 0 && (
+                        <div style={{ fontSize: 11, color: "#4ade80" }}>
+                          <strong>Strengths:</strong> {aiReview.strengths.slice(0, 2).join("; ")}
+                        </div>
+                      )}
+
+                      {aiReview.concerns && aiReview.concerns.length > 0 && (
+                        <div style={{ fontSize: 11, color: "#fbbf24" }}>
+                          <strong>Concerns:</strong> {aiReview.concerns.slice(0, 2).join("; ")}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => fetchAiReview(selectedVerification.id)}
+                      style={{
+                        width: "100%",
+                        padding: "6px",
+                        borderRadius: 6,
+                        background: "rgba(168, 85, 247, 0.2)",
+                        border: "1px solid rgba(168, 85, 247, 0.4)",
+                        color: "#c084fc",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer"
+                      }}
+                    >
+                      Generate AI Review
+                    </button>
+                  )}
                 </div>
 
-                {aiLoading ? (
-                  <div style={{ fontSize: 13, color: "#cbd5e1", padding: "12px 0", textAlign: "center" }}>
-                    <Brain size={24} style={{ margin: "0 auto 8px", display: "block", color: "#c084fc" }} />
-                    Groq LLM is evaluating CV documents & onboarding credentials...
+                {/* Existing Rejection Reason (if rejected) */}
+                {selectedVerification.rejection_reason && (
+                  <div style={{ padding: 10, background: "rgba(239, 68, 68, 0.15)", borderRadius: 10, color: "#f87171", fontSize: 12 }}>
+                    <strong>Rejection Rationale:</strong> {selectedVerification.rejection_reason}
                   </div>
-                ) : aiError ? (
-                  <div style={{ fontSize: 12, color: "#f87171" }}>{aiError}</div>
-                ) : aiReview ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span
+                )}
+
+                {/* Side-by-Side Decision Suite */}
+                {selectedVerification.status === "pending" ? (
+                  <div style={{
+                    background: "rgba(255, 255, 255, 0.03)",
+                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                    borderRadius: 14,
+                    padding: 14,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10
+                  }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>Decision & Action</div>
+
+                    {/* Rejection Note input */}
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 3 }}>
+                        Rejection Reason (if rejecting)
+                      </label>
+                      <textarea
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        rows={2}
+                        placeholder="Specify invalid certification or missing documents..."
                         style={{
-                          padding: "4px 10px",
+                          width: "100%",
+                          padding: 8,
                           borderRadius: 8,
-                          fontSize: 11,
-                          fontWeight: 900,
-                          background:
-                            aiReview.recommendation === "APPROVE"
-                              ? "rgba(34, 197, 94, 0.2)"
-                              : aiReview.recommendation === "REJECT"
-                              ? "rgba(239, 68, 68, 0.2)"
-                              : "rgba(245, 158, 11, 0.2)",
-                          color:
-                            aiReview.recommendation === "APPROVE"
-                              ? "#4ade80"
-                              : aiReview.recommendation === "REJECT"
-                              ? "#f87171"
-                              : "#fbbf24"
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          color: "#fff",
+                          fontSize: 12,
+                          outline: "none",
+                          resize: "none"
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                      <button
+                        type="button"
+                        onClick={handleReject}
+                        disabled={actionLoading}
+                        style={{
+                          flex: 1,
+                          padding: "8px 12px",
+                          borderRadius: 8,
+                          background: "rgba(239, 68, 68, 0.2)",
+                          border: "1px solid rgba(239, 68, 68, 0.4)",
+                          color: "#f87171",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4
                         }}
                       >
-                        RECOMMENDATION: {aiReview.recommendation}
-                      </span>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: "#c084fc" }}>
-                        Score: {aiReview.score}/100
-                      </span>
+                        <X size={14} /> Reject Application
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApprove(selectedVerification.id)}
+                        disabled={actionLoading}
+                        style={{
+                          flex: 1.2,
+                          padding: "8px 14px",
+                          borderRadius: 8,
+                          background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                          border: "none",
+                          color: "#fff",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4
+                        }}
+                      >
+                        <Check size={14} /> Approve Coach
+                      </button>
                     </div>
-
-                    <div style={{ fontSize: 13, color: "#e2e8f0", lineHeight: 1.5 }}>
-                      {aiReview.summary}
-                    </div>
-
-                    {aiReview.strengths && aiReview.strengths.length > 0 && (
-                      <div style={{ fontSize: 12, color: "#4ade80" }}>
-                        <strong>Key Strengths:</strong>
-                        <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
-                          {aiReview.strengths.map((s, i) => (
-                            <li key={i}>{s}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {aiReview.concerns && aiReview.concerns.length > 0 && (
-                      <div style={{ fontSize: 12, color: "#fbbf24" }}>
-                        <strong>Flagged Concerns:</strong>
-                        <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
-                          {aiReview.concerns.map((c, i) => (
-                            <li key={i}>{c}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
                   </div>
                 ) : (
-                  <button
-                    onClick={() => fetchAiReview(selectedVerification.id)}
-                    style={{
-                      width: "100%",
-                      padding: "8px",
-                      borderRadius: 8,
-                      background: "rgba(168, 85, 247, 0.2)",
-                      border: "1px solid rgba(168, 85, 247, 0.4)",
-                      color: "#c084fc",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer"
-                    }}
-                  >
-                    Generate Groq AI Credential Review
-                  </button>
-                )}
-              </div>
-
-              {selectedVerification.rejection_reason && (
-                <div style={{ padding: 12, background: "rgba(239, 68, 68, 0.15)", borderRadius: 10, color: "#f87171", fontSize: 13 }}>
-                  <strong>Rejection Reason:</strong> {selectedVerification.rejection_reason}
-                </div>
-              )}
-
-              {/* Inline Document Previewer */}
-              <div>
-                <h4 style={{ fontSize: 14, fontWeight: 700, color: "#cbd5e1", marginBottom: 10 }}>Submitted Documents</h4>
-                {(!selectedVerification.document_urls || selectedVerification.document_urls.length === 0) ? (
-                  <div style={{ fontSize: 13, color: "#64748b" }}>No document files uploaded.</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {selectedVerification.document_urls.map((url, idx) => (
-                      <div key={idx} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 12 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: "#38bdf8" }}>Document #{idx + 1}</span>
-                          <a href={url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#38bdf8", display: "flex", alignItems: "center", gap: 4 }}>
-                            Open <ExternalLink size={12} />
-                          </a>
-                        </div>
-                        {isImage(url) ? (
-                          <img
-                            src={url}
-                            alt={`Doc ${idx + 1}`}
-                            style={{ width: "100%", maxHeight: 300, objectFit: "contain", borderRadius: 8, background: "#000" }}
-                          />
-                        ) : (
-                          <iframe
-                            src={url}
-                            title={`Doc ${idx + 1}`}
-                            style={{ width: "100%", height: 260, border: "none", borderRadius: 8, background: "#fff" }}
-                          />
-                        )}
-                      </div>
-                    ))}
+                  <div style={{
+                    padding: 12,
+                    background: selectedVerification.status === "approved" ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)",
+                    border: `1px solid ${selectedVerification.status === "approved" ? "rgba(34, 197, 94, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
+                    borderRadius: 12,
+                    color: selectedVerification.status === "approved" ? "#4ade80" : "#f87171",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    textAlign: "center"
+                  }}>
+                    This application is already {selectedVerification.status.toUpperCase()}.
                   </div>
                 )}
               </div>
-
-              {selectedVerification.status === "pending" && (
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 12 }}>
-                  <button
-                    onClick={() => setShowRejectModal(true)}
-                    style={{
-                      padding: "10px 18px",
-                      borderRadius: 10,
-                      background: "rgba(239, 68, 68, 0.2)",
-                      border: "1px solid rgba(239, 68, 68, 0.4)",
-                      color: "#f87171",
-                      fontWeight: 700,
-                      cursor: "pointer"
-                    }}
-                  >
-                    Reject Application
-                  </button>
-                  <button
-                    onClick={() => handleApprove(selectedVerification.id)}
-                    style={{
-                      padding: "10px 22px",
-                      borderRadius: 10,
-                      background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                      border: "none",
-                      color: "#fff",
-                      fontWeight: 700,
-                      cursor: "pointer"
-                    }}
-                  >
-                    Approve Coach
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reject Reason Modal */}
-      {showRejectModal && (
-        <div className="modal-overlay" onClick={() => setShowRejectModal(false)} style={{ zIndex: 10000 }}>
-          <div
-            className="modal-card"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: 440,
-              width: "90%",
-              padding: 24,
-              borderRadius: 20,
-              background: "rgba(15, 23, 42, 0.95)",
-              backdropFilter: "blur(20px)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
-              color: "#fff"
-            }}
-          >
-            <h3 style={{ margin: "0 0 10px 0", fontSize: 18, fontWeight: 800 }}>Reject Coach Application</h3>
-            <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 14 }}>
-              Provide a clear reason for rejecting {selectedVerification?.coach_name}'s application. This will be sent to the coach.
-            </div>
-
-            <textarea
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              rows={4}
-              placeholder="e.g. Invalid certification document, illegible scan..."
-              style={{
-                width: "100%",
-                padding: "12px",
-                borderRadius: 10,
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                color: "#fff",
-                fontSize: 13,
-                outline: "none",
-                marginBottom: 16
-              }}
-            />
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-              <button
-                onClick={() => setShowRejectModal(false)}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: 10,
-                  background: "rgba(255,255,255,0.08)",
-                  border: "none",
-                  color: "#cbd5e1",
-                  cursor: "pointer"
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReject}
-                disabled={actionLoading}
-                style={{
-                  padding: "8px 18px",
-                  borderRadius: 10,
-                  background: "#ef4444",
-                  border: "none",
-                  color: "#fff",
-                  fontWeight: 700,
-                  cursor: "pointer"
-                }}
-              >
-                {actionLoading ? "Processing..." : "Confirm Reject"}
-              </button>
             </div>
           </div>
         </div>
