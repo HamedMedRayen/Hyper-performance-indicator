@@ -192,24 +192,83 @@
   border-bottom-left-radius: 4px;
 }
 
-/* ── Typing indicator ────────────────────────────────────── */
-.hpi-typing {
+/* ── Thinking Steps Animation ───────────────────────────── */
+.hpi-thinking-box {
   display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 12px 16px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 15px;
   align-self: flex-start;
-  background: var(--color-surface-h);
-  border: 1px solid var(--color-border);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.88) 0%, rgba(30, 41, 59, 0.75) 100%);
+  border: 1px solid rgba(6, 182, 212, 0.35);
   border-radius: 14px;
   border-bottom-left-radius: 4px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3), 0 0 14px rgba(6, 182, 212, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  max-width: 90%;
+  animation: hpi-msg-in 0.3s ease;
+}
+
+.hpi-thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hpi-thinking-pulse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(6, 182, 212, 0.15);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: #22d3ee;
+  animation: hpiSparkleGlow 1.8s ease-in-out infinite alternate;
+}
+
+.hpi-sparkle-icon {
+  animation: hpiSpin 4s linear infinite;
+}
+
+@keyframes hpiSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes hpiSparkleGlow {
+  0% { box-shadow: 0 0 4px rgba(6, 182, 212, 0.2); transform: scale(0.96); }
+  100% { box-shadow: 0 0 12px rgba(6, 182, 212, 0.6); transform: scale(1.05); }
+}
+
+.hpi-thinking-title {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #22d3ee;
+  letter-spacing: 0.3px;
+}
+
+.hpi-thinking-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 2px;
+}
+
+.hpi-typing-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .hpi-typing-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--aura-accent);
+  background: var(--aura-accent, #06b6d4);
   opacity: 0.5;
   animation: hpi-dot-bounce 1.2s infinite ease-in-out;
 }
@@ -223,17 +282,32 @@
 }
 
 @keyframes hpi-dot-bounce {
-
-  0%,
-  60%,
-  100% {
+  0%, 60%, 100% {
     transform: translateY(0);
     opacity: 0.35;
   }
-
   30% {
-    transform: translateY(-6px);
+    transform: translateY(-5px);
     opacity: 1;
+  }
+}
+
+.hpi-thinking-step-text {
+  font-size: 11.8px;
+  color: #cbd5e1;
+  font-weight: 500;
+  line-height: 1.3;
+  animation: hpiStepFadeIn 0.35s ease forwards;
+}
+
+@keyframes hpiStepFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

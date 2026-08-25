@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Brain, X, Send, Mic, MicOff, Phone, Paperclip } from "lucide-react";
+import { Brain, X, Send, Mic, MicOff, Phone, Paperclip, Sparkles } from "lucide-react";
 import "./HpiChat.css";
 import { API_BASE_URL as API_URL } from "../../utils/config";
 import { getSyncItem } from "../../utils/storage";
@@ -8,6 +8,21 @@ import { getChatHistory, saveChatHistory, subscribeChatHistory } from "../../uti
 import VapiCallModal from "../VapiCallModal/VapiCallModal";
 import MarkdownMessage from "../common/MarkdownMessage";
 
+const THINKING_STEPS = [
+  "Analyzing athlete profile & training metrics...",
+  "Searching scientific knowledge base...",
+  "Evaluating recovery state & volume trends...",
+  "Synthesizing personalized coaching response...",
+  "Finalizing response & verifying action blocks..."
+];
+
+const MEDICAL_THINKING_STEPS = [
+  "Extracting lab text & biomarker metrics...",
+  "Evaluating reference ranges & clinical flags...",
+  "Correlating biomarkers with athletic recovery...",
+  "Formulating structured health summary & recommendations..."
+];
+
 export default function HpiChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [isCallOpen, setIsCallOpen] = useState(false);
@@ -15,12 +30,27 @@ export default function HpiChat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploadingReport, setUploadingReport] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [error, setError] = useState(null);
   const [listening, setListening] = useState(false);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // Cycle thinking steps while loading
+  useEffect(() => {
+    if (!loading) {
+      setCurrentStepIndex(0);
+      return;
+    }
+    const stepsList = uploadingReport ? MEDICAL_THINKING_STEPS : THINKING_STEPS;
+    const interval = setInterval(() => {
+      setCurrentStepIndex((prev) => (prev + 1) % stepsList.length);
+    }, 1300);
+
+    return () => clearInterval(interval);
+  }, [loading, uploadingReport]);
 
   // Subscribe to central chat storage updates (from Vapi voice calls or other components)
   useEffect(() => {
@@ -282,15 +312,28 @@ export default function HpiChat() {
             </div>
           ))}
 
-          {/* Typing indicator */}
+          {/* Reasoning / Thinking Animation Indicator */}
           {loading && (
-            <div className="hpi-typing">
-              <span className="hpi-typing-dot" />
-              <span className="hpi-typing-dot" />
-              <span className="hpi-typing-dot" />
-              {uploadingReport && (
-                <span className="hpi-uploading-text">Analyzing medical report & biomarkers…</span>
-              )}
+            <div className="hpi-thinking-box">
+              <div className="hpi-thinking-header">
+                <div className="hpi-thinking-pulse">
+                  <Sparkles className="hpi-sparkle-icon" size={13} />
+                </div>
+                <span className="hpi-thinking-title">
+                  {uploadingReport ? "Analyzing medical report..." : "Hpi is thinking..."}
+                </span>
+              </div>
+              
+              <div className="hpi-thinking-status">
+                <div className="hpi-typing-dots">
+                  <span className="hpi-typing-dot" />
+                  <span className="hpi-typing-dot" />
+                  <span className="hpi-typing-dot" />
+                </div>
+                <span className="hpi-thinking-step-text" key={currentStepIndex}>
+                  {(uploadingReport ? MEDICAL_THINKING_STEPS : THINKING_STEPS)[currentStepIndex]}
+                </span>
+              </div>
             </div>
           )}
 

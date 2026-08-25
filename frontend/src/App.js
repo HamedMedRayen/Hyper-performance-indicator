@@ -86,14 +86,15 @@ function AppShell() {
   const isLanding = location.pathname === "/landing" || (!user && location.pathname === "/");
 
   if (!user || isAuth || isLanding) {
+    const isAdmin = user && (user.role === "admin" || user.profile?.role === "admin");
     return (
       <PageWrap>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/" element={user ? <RequireAuth><Dashboard /></RequireAuth> : <LandingPage />} />
+            <Route path="/" element={user ? <RequireAuth>{isAdmin ? <Navigate to="/admin" replace /> : <Dashboard />}</RequireAuth> : <LandingPage />} />
             <Route path="/landing" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
-            <Route path="*" element={<Navigate to={user ? "/" : "/"} replace />} />
+            <Route path="*" element={<Navigate to={user ? (isAdmin ? "/admin" : "/") : "/"} replace />} />
           </Routes>
         </Suspense>
       </PageWrap>
@@ -130,30 +131,41 @@ function AppShell() {
           <Suspense fallback={<PageLoader />}>
             <ErrorBoundary title="Page Error" message="This page encountered an error. Try refreshing." fullPage>
               <Routes>
-                <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
-                <Route path="/onboarding" element={<RequireAuth><OnboardingFlow /></RequireAuth>} />
-                <Route path="/workouts" element={<RequireAuth><Workouts /></RequireAuth>} />
-                <Route path="/log" element={<RequireAuth><LogWorkout /></RequireAuth>} />
-                <Route path="/progress" element={<RequireAuth><Progress /></RequireAuth>} />
-                <Route path="/fatigue-check" element={<RequireAuth><FatigueCheck /></RequireAuth>} />
+                {/* Admin Accounts: Exclusively dedicated to Admin Management */}
+                {isAdmin ? (
+                  <>
+                    <Route path="/" element={<Navigate to="/admin" replace />} />
+                    <Route path="/admin/*" element={<RequireAuth><RequireAdmin><AdminDashboard /></RequireAdmin></RequireAuth>} />
+                    <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+                    <Route path="*" element={<Navigate to="/admin" replace />} />
+                  </>
+                ) : (
+                  <>
+                    <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
+                    <Route path="/onboarding" element={<RequireAuth><OnboardingFlow /></RequireAuth>} />
+                    <Route path="/workouts" element={<RequireAuth><Workouts /></RequireAuth>} />
+                    <Route path="/log" element={<RequireAuth><LogWorkout /></RequireAuth>} />
+                    <Route path="/progress" element={<RequireAuth><Progress /></RequireAuth>} />
+                    <Route path="/fatigue-check" element={<RequireAuth><FatigueCheck /></RequireAuth>} />
 
-                <Route path="/exercises" element={<RequireAuth><Exercises /></RequireAuth>} />
-                <Route path="/recommend" element={<RequireAuth><Recommend /></RequireAuth>} />
-                <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
-                <Route path="/measurements" element={<RequireAuth><Measurements /></RequireAuth>} />
-                <Route path="/nutrition" element={<RequireAuth><Nutrition /></RequireAuth>} />
-                <Route path="/photos" element={<RequireAuth><ProgressPhotos /></RequireAuth>} />
-                <Route path="/injuries" element={<RequireAuth><InjuryLog /></RequireAuth>} />
-                <Route path="/sleep" element={<RequireAuth><SleepTracker /></RequireAuth>} />
-                <Route path="/challenges" element={<RequireAuth><Challenges /></RequireAuth>} />
-                <Route path="/coach/*" element={<RequireAuth><CoachDashboard /></RequireAuth>} />
-                <Route path="/admin/*" element={<RequireAuth><RequireAdmin><AdminDashboard /></RequireAdmin></RequireAuth>} />
-                <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="/exercises" element={<RequireAuth><Exercises /></RequireAuth>} />
+                    <Route path="/recommend" element={<RequireAuth><Recommend /></RequireAuth>} />
+                    <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+                    <Route path="/measurements" element={<RequireAuth><Measurements /></RequireAuth>} />
+                    <Route path="/nutrition" element={<RequireAuth><Nutrition /></RequireAuth>} />
+                    <Route path="/photos" element={<RequireAuth><ProgressPhotos /></RequireAuth>} />
+                    <Route path="/injuries" element={<RequireAuth><InjuryLog /></RequireAuth>} />
+                    <Route path="/sleep" element={<RequireAuth><SleepTracker /></RequireAuth>} />
+                    <Route path="/challenges" element={<RequireAuth><Challenges /></RequireAuth>} />
+                    <Route path="/coach/*" element={<RequireAuth><CoachDashboard /></RequireAuth>} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </>
+                )}
               </Routes>
             </ErrorBoundary>
           </Suspense>
         </PageWrap>
-        {!isMainArchitecture && <BottomNav />}
+        {!isMainArchitecture && !isAdmin && <BottomNav />}
       </main>
     </div>
   );

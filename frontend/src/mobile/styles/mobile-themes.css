@@ -314,62 +314,62 @@
 }
 
 
-/* ── 4. MONOCHROME THEME (Pure Black & White) ───────────────── */
+/* ── 4. MONOCHROME THEME (Obsidian & Crimson Pulse) ───────────────── */
 .mobile-app[data-mobile-theme="monochrome"] {
-  --color-bg: #000000;
-  --color-surface: #09090b;
-  --color-surface-h: #18181b;
+  --color-bg: #0a0a0c;
+  --color-surface: #121216;
+  --color-surface-h: #1a1a22;
   --color-text: #ffffff;
-  --color-text-2: #e4e4e7;
-  --color-text-3: #a1a1aa;
-  --color-text-inv: #000000;
-  --color-border: rgba(255, 255, 255, 0.12);
-  --color-border-h: rgba(255, 255, 255, 0.25);
-  --bg-input: #09090b;
-  --border-input: rgba(255, 255, 255, 0.2);
-  --bg-glass: rgba(14, 14, 16, 0.92);
-  --border-glass: rgba(255, 255, 255, 0.1);
-  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.8);
+  --color-text-2: #e2e8f0;
+  --color-text-3: #94a3b8;
+  --color-text-inv: #ffffff;
+  --color-border: rgba(255, 59, 92, 0.2);
+  --color-border-h: rgba(255, 59, 92, 0.45);
+  --bg-input: #121216;
+  --border-input: rgba(255, 59, 92, 0.3);
+  --bg-glass: rgba(18, 18, 24, 0.92);
+  --border-glass: rgba(255, 59, 92, 0.2);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.85), 0 0 15px rgba(255, 59, 92, 0.12);
 
   --text-primary: #ffffff;
-  --text-secondary: #e4e4e7;
-  --mobile-card-bg: rgba(18, 18, 20, 0.85);
-  --mobile-card-border: rgba(255, 255, 255, 0.12);
+  --text-secondary: #e2e8f0;
+  --mobile-card-bg: rgba(20, 20, 26, 0.88);
+  --mobile-card-border: rgba(255, 59, 92, 0.2);
 
-  --aura-accent: #ffffff;
-  --aura-accent-rgb: 255, 255, 255;
-  --aura-purple: #e4e4e7;
-  --aura-pink: #d4d4d8;
-  --aura-green: #ffffff;
-  --aura-orange: #a1a1aa;
-  --aura-cyan: #ffffff;
-  --color-on-accent: #000000;
+  --aura-accent: #ff3b5c;
+  --aura-accent-rgb: 255, 59, 92;
+  --aura-purple: #ff6b81;
+  --aura-pink: #ff3b5c;
+  --aura-green: #10b981;
+  --aura-orange: #f59e0b;
+  --aura-cyan: #38bdf8;
+  --color-on-accent: #ffffff;
 
-  background: #000000;
+  background: #0a0a0c;
   color: #ffffff;
 }
 
 .mobile-app[data-mobile-theme="monochrome"] .mobile-card {
-  background: rgba(18, 18, 20, 0.85) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+  background: rgba(20, 20, 26, 0.88) !important;
+  border: 1px solid rgba(255, 59, 92, 0.2) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 12px rgba(255, 59, 92, 0.1) !important;
   backdrop-filter: blur(16px) !important;
   -webkit-backdrop-filter: blur(16px) !important;
 }
 
 .mobile-app[data-mobile-theme="monochrome"] .mobile-page {
-  background: #000000;
+  background: #0a0a0c;
 }
 
 .mobile-app[data-mobile-theme="monochrome"] .floating-bottom-nav-container {
-  background: rgba(10, 10, 10, 0.95) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
+  background: rgba(14, 14, 18, 0.95) !important;
+  border-color: rgba(255, 59, 92, 0.25) !important;
 }
 
 .mobile-app[data-mobile-theme="monochrome"] .floating-nav-item.active {
-  background: #ffffff !important;
-  color: #000000 !important;
-  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.25) !important;
+  background: linear-gradient(135deg, #ff3b5c 0%, #ff6b81 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 18px rgba(255, 59, 92, 0.4) !important;
 }
 
 .mobile-app[data-mobile-theme="monochrome"] .mobile-grid-item {

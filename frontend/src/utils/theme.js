@@ -9,14 +9,14 @@ const MOBILE_THEMES = ["dark", "light", "queen", "monochrome"];
 
 // Apply saved theme immediately from localStorage as a fast sync fallback for web
 const savedTheme = typeof window !== "undefined"
-  ? (localStorage.getItem("aura-theme") || "dark")
-  : "dark";
+  ? (localStorage.getItem("aura-theme") || "monochrome")
+  : "monochrome";
 if (typeof window !== "undefined") {
   document.documentElement.setAttribute("data-theme", savedTheme);
 }
 
 export const ThemeContext = createContext({
-  theme: "dark",
+  theme: "monochrome",
   setTheme: () => { },
   toggle: () => { },
   previewTheme: null,
