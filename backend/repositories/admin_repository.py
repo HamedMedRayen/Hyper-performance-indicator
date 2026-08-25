@@ -53,7 +53,12 @@ class AdminRepository(BaseRepository[Dict[str, Any]]):
         total_users = self._fetchone("SELECT COUNT(*) as cnt FROM users")["cnt"]
         pending_verifications = self._fetchone("SELECT COUNT(*) as cnt FROM coach_verifications WHERE status = 'pending'")["cnt"]
         open_reports = self._fetchone("SELECT COUNT(*) as cnt FROM reports WHERE status IN ('open', 'in_review')")["cnt"]
-        active_coaches = self._fetchone("SELECT COUNT(*) as cnt FROM users WHERE role = 'coach' AND (coach_verified = TRUE OR verification_status = 'approved')")["cnt"]
+        active_coaches = self._fetchone("""
+            SELECT COUNT(*) as cnt FROM users 
+            WHERE role = 'coach' 
+              AND (verification_status = 'approved' OR (verification_status IS NULL AND (coach_verified = TRUE OR approved = TRUE)))
+              AND (verification_status IS NULL OR verification_status NOT IN ('pending', 'rejected', 'unsubmitted'))
+        """)["cnt"]
 
         return {
             "total_users": total_users,
@@ -154,7 +159,7 @@ class AdminRepository(BaseRepository[Dict[str, Any]]):
 
             cur.execute("""
                 UPDATE users
-                SET role = 'coach', coach_verified = TRUE, verification_status = 'approved', rejection_reason = NULL
+                SET role = 'coach', coach_verified = TRUE, approved = TRUE, verification_status = 'approved', rejection_reason = NULL
                 WHERE id = %s
             """, (coach_id,))
 
@@ -176,7 +181,7 @@ class AdminRepository(BaseRepository[Dict[str, Any]]):
 
             cur.execute("""
                 UPDATE users
-                SET coach_verified = FALSE, verification_status = 'rejected', rejection_reason = %s
+                SET coach_verified = FALSE, approved = FALSE, verification_status = 'rejected', rejection_reason = %s
                 WHERE id = %s
             """, (reason, coach_id))
 
@@ -215,7 +220,7 @@ class AdminRepository(BaseRepository[Dict[str, Any]]):
 
         sql = f"""
             SELECT 
-                u.id, u.auth_id, u.name, u.email, u.role, u.is_suspended, u.suspension_reason,
+                u.id, u.auth_id, u.name, u.email, u.role, u.is_suspended, u.suspension_reason, u.suspended_until,
                 u.coach_verified, u.verification_status, u.avatar_url, u.created_at, u.updated_at
             FROM users u
             {where_sql}
@@ -229,30 +234,62 @@ class AdminRepository(BaseRepository[Dict[str, Any]]):
                 r["created_at"] = r["created_at"].isoformat()
             if r.get("updated_at"):
                 r["updated_at"] = r["updated_at"].isoformat()
+            if r.get("suspended_until"):
+                r["suspended_until"] = r["suspended_until"].isoformat()
 
         return {"items": rows, "total": total, "page": page, "limit": limit}
 
-    def suspend_user(self, user_id: int, reason: str) -> Optional[Dict[str, Any]]:
+    def suspend_user(
+        self,
+        user_id: int,
+        reason: str,
+        duration_days: Optional[int] = None,
+        suspended_until: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        from datetime import datetime, timedelta, timezone
+        
+        target_until = None
+        if suspended_until:
+            try:
+                target_until = datetime.fromisoformat(suspended_until.replace("Z", "+00:00"))
+            except Exception:
+                target_until = None
+        elif duration_days and duration_days > 0:
+            target_until = datetime.now(timezone.utc) + timedelta(days=duration_days)
+
         sql = """
             UPDATE users
-            SET is_suspended = TRUE, suspension_reason = %s, updated_at = NOW()
+            SET is_suspended = TRUE, suspension_reason = %s, suspended_until = %s, updated_at = NOW()
             WHERE id = %s
-            RETURNING id, name, email, role, is_suspended, suspension_reason
+            RETURNING id, name, email, role, is_suspended, suspension_reason, suspended_until
         """
-        row = self._fetchone(sql, (reason, user_id))
+        row = self._fetchone(sql, (reason, target_until, user_id))
         self.conn.commit()
+        if row and row.get("suspended_until"):
+            row["suspended_until"] = row["suspended_until"].isoformat()
         return row
 
     def reinstate_user(self, user_id: int) -> Optional[Dict[str, Any]]:
         sql = """
             UPDATE users
-            SET is_suspended = FALSE, suspension_reason = NULL, updated_at = NOW()
+            SET is_suspended = FALSE, suspension_reason = NULL, suspended_until = NULL, updated_at = NOW()
             WHERE id = %s
-            RETURNING id, name, email, role, is_suspended, suspension_reason
+            RETURNING id, name, email, role, is_suspended, suspension_reason, suspended_until
         """
         row = self._fetchone(sql, (user_id,))
         self.conn.commit()
         return row
+
+    def record_report_inquiry(self, report_id: int, notes: str) -> Optional[Dict[str, Any]]:
+        sql = """
+            UPDATE reports
+            SET inquiry_sent = TRUE, inquiry_notes = %s, inquiry_at = NOW()
+            WHERE id = %s
+            RETURNING id
+        """
+        self._fetchone(sql, (notes, report_id))
+        self.conn.commit()
+        return self.get_report_detail(report_id)
 
     def get_reports(
         self,
@@ -300,6 +337,10 @@ class AdminRepository(BaseRepository[Dict[str, Any]]):
                 r["created_at"] = r["created_at"].isoformat()
             if r.get("resolved_at"):
                 r["resolved_at"] = r["resolved_at"].isoformat()
+            if r.get("inquiry_at"):
+                r["inquiry_at"] = r["inquiry_at"].isoformat()
+            if r.get("inquiry_reply_at"):
+                r["inquiry_reply_at"] = r["inquiry_reply_at"].isoformat()
 
         return {"items": rows, "total": total, "page": page, "limit": limit}
 
@@ -324,6 +365,10 @@ class AdminRepository(BaseRepository[Dict[str, Any]]):
                 row["created_at"] = row["created_at"].isoformat()
             if row.get("resolved_at"):
                 row["resolved_at"] = row["resolved_at"].isoformat()
+            if row.get("inquiry_at"):
+                row["inquiry_at"] = row["inquiry_at"].isoformat()
+            if row.get("inquiry_reply_at"):
+                row["inquiry_reply_at"] = row["inquiry_reply_at"].isoformat()
         return row
 
     def resolve_report(self, report_id: int, admin_id: int, admin_notes: str) -> Optional[Dict[str, Any]]:

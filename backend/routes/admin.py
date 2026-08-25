@@ -24,6 +24,12 @@ class RejectReasonRequest(BaseModel):
 
 class SuspendUserRequest(BaseModel):
     reason: str = Field(..., min_length=1, description="Reason for suspension")
+    duration_days: Optional[int] = Field(None, description="Optional suspension duration in days")
+    suspended_until: Optional[str] = Field(None, description="Optional ISO timestamp until which user is suspended")
+
+class ContactCoachRequest(BaseModel):
+    subject: str = Field(..., min_length=1, max_length=150)
+    message: str = Field(..., min_length=1)
 
 class ResolveReportRequest(BaseModel):
     admin_notes: str = Field(..., min_length=1)
@@ -122,8 +128,10 @@ def generate_coach_ai_review(
         }}
         """
 
-        model_name = os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-120b")
-        completion = client.chat.completions.create(
+        from services.llm_service import create_groq_chat_completion
+        model_name = os.getenv("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
+        completion = create_groq_chat_completion(
+            client=client,
             model=model_name,
             messages=[
                 {"role": "system", "content": "You are HPI Fitness Senior Coaching Administrator and Credential Compliance Auditor. Respond ONLY with valid JSON."},
@@ -239,16 +247,31 @@ def suspend_user(
 ):
     admin_id = current["user_id"]
     repo = AdminRepository(db)
-    user = repo.suspend_user(user_id, payload.reason)
+    user = repo.suspend_user(
+        user_id=user_id,
+        reason=payload.reason,
+        duration_days=payload.duration_days,
+        suspended_until=payload.suspended_until
+    )
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
+
+    until_str = user.get("suspended_until")
+    duration_info = f" (Temporarily until {until_str[:10]})" if until_str else " (Indefinite)"
+    action_reason = f"{payload.reason}{duration_info}"
 
     repo.log_action(
         admin_id=admin_id,
         action_type="suspend_user",
         target_type="user",
         target_id=user_id,
-        reason=payload.reason
+        reason=action_reason
+    )
+
+    notif_msg = (
+        f"Your account has been temporarily suspended until {until_str[:10]}. Reason: {payload.reason}"
+        if until_str
+        else f"Your account has been suspended indefinitely by an administrator. Reason: {payload.reason}"
     )
 
     _notify(
@@ -256,11 +279,97 @@ def suspend_user(
         user_id=user_id,
         sender_id=admin_id,
         n_type="account_suspension",
-        title="Account Suspended",
-        message=f"Your account has been suspended by an administrator. Reason: {payload.reason}"
+        title="Account Suspended" if not until_str else "Account Temporarily Suspended",
+        message=notif_msg,
+        data={"suspended_until": until_str, "reason": payload.reason}
     )
 
     return user
+
+
+@router.post("/users/{user_id}/contact")
+def contact_user(
+    user_id: int,
+    payload: ContactCoachRequest,
+    current: dict = Depends(require_admin),
+    db=Depends(get_db)
+):
+    admin_id = current["user_id"]
+    repo = AdminRepository(db)
+    
+    # Verify user exists
+    with db.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("SELECT id, name, email, role FROM users WHERE id = %s", (user_id,))
+        target_user = cur.fetchone()
+    
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    repo.log_action(
+        admin_id=admin_id,
+        action_type="contact_user_inquiry",
+        target_type="user",
+        target_id=user_id,
+        reason=f"Subject: {payload.subject} | {payload.message[:80]}"
+    )
+
+    _notify(
+        db,
+        user_id=user_id,
+        sender_id=admin_id,
+        n_type="admin_inquiry",
+        title=f"Official Notice: {payload.subject}",
+        message=payload.message,
+        data={"official": True, "subject": payload.subject}
+    )
+
+    return {"success": True, "message": f"Message sent to {target_user['name']}"}
+
+
+@router.post("/reports/{report_id}/contact-coach")
+def contact_reported_coach(
+    report_id: int,
+    payload: ContactCoachRequest,
+    current: dict = Depends(require_admin),
+    db=Depends(get_db)
+):
+    admin_id = current["user_id"]
+    repo = AdminRepository(db)
+    report = repo.get_report_detail(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found.")
+
+    target_user_id = report.get("target_user_id")
+    if not target_user_id:
+        raise HTTPException(status_code=400, detail="This report does not have an associated coach or target user.")
+
+    # Record inquiry on report
+    inquiry_record = f"Admin inquiry sent on {payload.subject}: {payload.message}"
+    repo.record_report_inquiry(report_id, inquiry_record)
+
+    repo.log_action(
+        admin_id=admin_id,
+        action_type="contact_reported_coach",
+        target_type="report",
+        target_id=report_id,
+        reason=f"Coach ID #{target_user_id} contacted regarding Report #{report_id}: {payload.subject}"
+    )
+
+    _notify(
+        db,
+        user_id=target_user_id,
+        sender_id=admin_id,
+        n_type="admin_inquiry",
+        title=f"Administrative Inquiry: {payload.subject} (Ref: Report #{report_id})",
+        message=f"{payload.message}\n\nPlease review this notice carefully regarding a recent report received on your coaching profile.",
+        data={"report_id": report_id, "subject": payload.subject, "official": True}
+    )
+
+    return {
+        "success": True,
+        "message": f"Official inquiry sent to reported coach #{target_user_id}.",
+        "report": repo.get_report_detail(report_id)
+    }
 
 
 @router.post("/users/{user_id}/reinstate")

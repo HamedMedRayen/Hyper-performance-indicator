@@ -408,9 +408,11 @@ Respond ONLY with a JSON object:
 { "calories": int, "protein_g": float, "carbs_g": float, "fat_g": float, "fiber_g": float, "meal_name": "str" }
 Be accurate based on typical serving sizes."""
 
-    groq_chat_model = os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-120b")
+    from services.llm_service import create_groq_chat_completion
+    groq_chat_model = os.getenv("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
     try:
-        completion = client.chat.completions.create(
+        completion = create_groq_chat_completion(
+            client=client,
             model=groq_chat_model,
             messages=[{"role": "system", "content": prompt}, {"role": "user", "content": payload.description}],
             temperature=0.1,
@@ -456,7 +458,7 @@ Be accurate based on typical serving sizes."""
 
 # Active Models on Groq
 GROQ_VISION_MODEL = os.getenv("GROQ_VISION_MODEL", "qwen/qwen3.6-27b")
-GROQ_CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-120b")
+GROQ_CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
 
 @router.post("/scan-vision")
 def scan_meal_vision(payload: ScanVisionRequest, user_id: int = Depends(get_current_user_id), db=Depends(get_db)):
