@@ -41,7 +41,7 @@ export default function ExercisePicker({ value, onChange, onSelect, onClose, isI
   useEffect(() => {
     if (isOpen && exercises.length === 0) {
       setLoading(true);
-      api.getExercises({ limit: 1000 })
+      api.getExercises({ limit: 2000 })
         .then(setExercises)
         .catch(console.error)
         .finally(() => setLoading(false));

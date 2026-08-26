@@ -95,7 +95,7 @@ export default function MobileExercises() {
   useEffect(() => {
     setLoading(true);
     setExpandedIdx(null);
-    const filters = { limit: 100 };
+    const filters = { limit: 2000 };
     if (search.trim()) filters.search = search.trim();
     if (equipment !== "All") filters.equipment = equipment;
     if (bodyPart !== "All") filters.body_part = bodyPart;

@@ -156,7 +156,7 @@ export default function MobileWorkouts() {
   useEffect(() => {
     fetchTemplates();
 
-    api.getExercises({ limit: 200 })
+    api.getExercises({ limit: 2000 })
       .then(res => setExercisesList(res.exercises || res || []))
       .catch(() => {});
   }, []);
