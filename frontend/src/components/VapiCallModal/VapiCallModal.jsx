@@ -22,7 +22,7 @@ import {
   fetchVapiContext,
   syncVapiTranscriptToBackend
 } from "../../utils/vapiService";
-import { addChatMessages } from "../../utils/chatStorage";
+import { addChatMessages, isSystemPromptMessage } from "../../utils/chatStorage";
 
 export default function VapiCallModal({ isOpen, onClose }) {
   const [callState, setCallState] = useState("idle"); // idle, connecting, connected, speaking, listening, error
@@ -68,7 +68,8 @@ export default function VapiCallModal({ isOpen, onClose }) {
     if (currentTranscripts.length === 0) return;
 
     const formattedMessages = currentTranscripts
-      .filter((t) => t.text && t.text.trim())
+      .filter((t) => t.text && t.text.trim() && !isSystemPromptMessage(t))
+      .filter((t) => t.role === "User" || t.role === "user" || t.role === "Hpi AI" || t.role === "assistant")
       .map((t) => ({
         role: t.role === "User" || t.role === "user" ? "user" : "assistant",
         content: `🎙️ ${t.text.trim()}`
@@ -187,9 +188,10 @@ export default function VapiCallModal({ isOpen, onClose }) {
       vapi.on("message", (msg) => {
         console.log("Vapi message:", msg);
         if (msg.type === "transcript") {
-          const role = msg.role === "user" ? "User" : "Hpi AI";
+          if (msg.role === "system") return;
           const text = msg.transcript;
-          if (text) {
+          if (text && !isSystemPromptMessage({ content: text })) {
+            const role = msg.role === "user" ? "User" : "Hpi AI";
             setTranscripts((prev) => {
               if (prev.length > 0 && prev[prev.length - 1].role === role && msg.transcriptType === "partial") {
                 const next = [...prev];
@@ -201,11 +203,12 @@ export default function VapiCallModal({ isOpen, onClose }) {
           }
         } else if (msg.type === "conversation-update" && Array.isArray(msg.conversation)) {
           const parsed = msg.conversation
+            .filter((item) => item && item.role !== "system")
             .map((item) => ({
               role: item.role === "user" ? "User" : "Hpi AI",
               text: item.content || item.text || ""
             }))
-            .filter((x) => x.text);
+            .filter((x) => x.text && !isSystemPromptMessage({ content: x.text }));
           if (parsed.length > 0) {
             setTranscripts(parsed);
           }

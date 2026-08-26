@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Mic, Send, X, MicOff } from "lucide-react";
+import { Mic, Send, X, MicOff, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Keyboard } from "@capacitor/keyboard";
 import { Capacitor } from "@capacitor/core";
 import { API_BASE_URL } from "../../utils/config";
 import { getSyncItem } from "../../utils/storage";
 import { startListening, stopListening } from "../../utils/speechRecognition";
-import { getChatHistory, saveChatHistory, subscribeChatHistory } from "../../utils/chatStorage";
+import { getChatHistory, saveChatHistory, subscribeChatHistory, isSystemPromptMessage, clearChatHistory } from "../../utils/chatStorage";
 import MarkdownMessage from "../../components/common/MarkdownMessage";
 
 export default function MobileChat() {
@@ -125,12 +125,36 @@ export default function MobileChat() {
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "var(--color-text)" }}>HPI AI Assistant</h2>
           <span style={{ fontSize: 12, color: "var(--aura-cyan)", fontWeight: 600 }}>Online</span>
         </div>
+        <button
+          onClick={() => {
+            if (window.confirm("Clear all conversation history with Hpi?")) {
+              clearChatHistory();
+            }
+          }}
+          style={{
+            background: "transparent",
+            border: "none",
+            color: "var(--color-text-3)",
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            marginLeft: "auto",
+            cursor: "pointer"
+          }}
+          title="Clean / Clear Conversation"
+          aria-label="Clean conversation"
+        >
+          <Trash2 size={18} />
+        </button>
       </div>
 
       {/* Messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-        {messages.map(m => (
-          <div key={m.id} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%" }}>
+        {messages.filter(m => m && !isSystemPromptMessage(m)).map((m, idx) => (
+          <div key={m.id || idx} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%" }}>
             <div style={{
               maxWidth: "85%",
               padding: "12px 16px",

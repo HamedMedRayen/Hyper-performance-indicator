@@ -1,24 +1,55 @@
-# Backend Python Dependencies
-# NOTE: Mobile app & Frontend technologies (React, Capacitor plugins, etc.) are defined in frontend/package.json
-fastapi
-uvicorn[standard]
-psycopg2-binary
-python-dotenv
-passlib[bcrypt]
-python-jose[cryptography]
-pandas
-scikit-learn
-numpy
-groq
-slowapi==0.1.9
-google-auth==2.37.0
-transformers
-torch
-librosa
-soundfile
-qdrant-client
-sentence-transformers
-duckdb
-openpyxl
-pyyaml
-pydantic
+# ──────────────────────────────────────────────────────────────
+# HPI Backend — Python Dependencies
+# ──────────────────────────────────────────────────────────────
+# NOTE: Frontend / Mobile (React, Capacitor) deps live in frontend/package.json
+#
+# Install:  pip install -r requirements.txt
+# ──────────────────────────────────────────────────────────────
+
+# ── Web framework ─────────────────────────────────────────────
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.30.0,<1.0.0
+python-multipart>=0.0.9          # required by FastAPI for UploadFile / Form
+
+# ── Database ──────────────────────────────────────────────────
+psycopg2-binary>=2.9.9,<3.0.0   # PostgreSQL adapter (Supabase)
+
+# ── Auth & Security ──────────────────────────────────────────
+python-jose[cryptography]>=3.3.0,<4.0.0  # JWT encode/decode (auth_service)
+PyJWT>=2.8.0,<3.0.0                      # JWT for Stream video tokens
+passlib[bcrypt]>=1.7.4,<2.0.0
+google-auth>=2.37.0,<3.0.0               # Google OAuth2 verification
+slowapi==0.1.9                            # rate limiting on auth routes
+
+# ── Environment / Config ─────────────────────────────────────
+python-dotenv>=1.0.0,<2.0.0
+pydantic>=2.0.0,<3.0.0
+email-validator>=2.0.0           # required by pydantic EmailStr
+
+# ── LLM / AI ─────────────────────────────────────────────────
+groq>=0.9.0,<1.0.0               # Groq cloud LLM client
+
+# ── Data Science ──────────────────────────────────────────────
+pandas>=2.0.0,<3.0.0
+numpy>=1.26.0,<3.0.0
+scikit-learn>=1.4.0,<2.0.0
+
+# ── RAG / Vector Search ──────────────────────────────────────
+qdrant-client>=1.9.0,<2.0.0
+sentence-transformers>=3.0.0,<4.0.0
+torch>=2.0.0                     # PyTorch (CPU is fine for embeddings)
+
+# ── Audio / Speech (chat voice features) ─────────────────────
+librosa>=0.10.0,<1.0.0
+soundfile>=0.12.0,<1.0.0
+
+# ── NLP ───────────────────────────────────────────────────────
+transformers>=4.40.0,<5.0.0
+
+# ── Data Formats ──────────────────────────────────────────────
+duckdb>=1.0.0,<2.0.0             # in-memory SQL for RAG Excel data
+openpyxl>=3.1.0,<4.0.0           # Excel file reading
+pyyaml>=6.0,<7.0.0               # YAML config parsing
+
+# ── HTTP ──────────────────────────────────────────────────────
+requests>=2.31.0,<3.0.0          # ExerciseDB sync API calls

@@ -119,7 +119,8 @@
 }
 
 .hpi-header-close,
-.hpi-call-header-btn {
+.hpi-call-header-btn,
+.hpi-clear-header-btn {
   width: 32px;
   height: 32px;
   border-radius: 8px;
@@ -137,6 +138,11 @@
 .hpi-call-header-btn:hover {
   background: var(--color-surface-h);
   color: var(--aura-accent, #06b6d4);
+}
+
+.hpi-clear-header-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
 }
 
 
