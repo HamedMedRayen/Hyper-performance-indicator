@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Brain, Send, Mic, MicOff, Paperclip } from "lucide-react";
+import { Brain, Send, Mic, MicOff, Paperclip, Trash2 } from "lucide-react";
 import { API_BASE_URL as API_URL } from "../../utils/config";
 import { getSyncItem } from "../../utils/storage";
 import { startListening, stopListening } from "../../utils/speechRecognition";
-import { getChatHistory, saveChatHistory, subscribeChatHistory } from "../../utils/chatStorage";
+import { getChatHistory, saveChatHistory, subscribeChatHistory, isSystemPromptMessage, clearChatHistory } from "../../utils/chatStorage";
 import MarkdownMessage from "../common/MarkdownMessage";
 
 /**
@@ -183,12 +183,45 @@ export default function InlineHpiChat() {
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)' }}>Hpi AI Coach & Medical Expert</div>
           <div style={{ fontSize: 11, color: 'var(--color-text-3)', fontWeight: 500 }}>Training, nutrition & lab report analysis</div>
         </div>
-        <div style={{
-          marginLeft: 'auto',
-          width: 8, height: 8, borderRadius: '50%',
-          background: 'var(--aura-accent)',
-          boxShadow: '0 0 6px var(--aura-accent)',
-        }} />
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={() => {
+              if (window.confirm("Clear all conversation history with Hpi?")) {
+                clearChatHistory();
+              }
+            }}
+            title="Clean / Clear conversation history"
+            aria-label="Clean conversation"
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--color-text-3)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#ef4444';
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--color-text-3)';
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <Trash2 size={15} />
+          </button>
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: 'var(--aura-accent)',
+            boxShadow: '0 0 6px var(--aura-accent)',
+          }} />
+        </div>
       </div>
 
       {/* Messages */}
@@ -197,7 +230,7 @@ export default function InlineHpiChat() {
         padding: '16px 14px',
         display: 'flex', flexDirection: 'column', gap: 10,
       }}>
-        {messages.map((msg, i) => (
+        {messages.filter((msg) => msg && !isSystemPromptMessage(msg)).map((msg, i) => (
           <div key={i} style={{
             maxWidth: '82%',
             padding: '10px 14px',

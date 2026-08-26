@@ -9,6 +9,27 @@ const DEFAULT_WELCOME = {
 };
 
 /**
+ * Checks if a message is a leaked system prompt or internal action block.
+ */
+export function isSystemPromptMessage(msg) {
+  if (!msg) return true;
+  if (msg.role === "system") return true;
+  const content = typeof msg.content === "string" ? msg.content : (msg.text || "");
+  if (!content || typeof content !== "string") return false;
+  const lower = content.toLowerCase();
+  if (
+    lower.includes("you are hpi, the ambient agentic system operator") ||
+    lower.includes("=== medical & lab report analysis ===") ||
+    lower.includes("=== hpi's mandate") ||
+    lower.includes("=== athlete profile & onboarding data ===") ||
+    lower.includes("critical rule: do not use any emojis")
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Retrieve saved chat history array from localStorage.
  */
 export function getChatHistory() {
@@ -16,8 +37,11 @@ export function getChatHistory() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [DEFAULT_WELCOME];
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+    if (Array.isArray(parsed)) {
+      const sanitized = parsed.filter((m) => m && !isSystemPromptMessage(m));
+      if (sanitized.length > 0) {
+        return sanitized;
+      }
     }
   } catch (e) {
     console.warn("Error reading hpi_chat_history from storage:", e);
@@ -31,8 +55,9 @@ export function getChatHistory() {
 export function saveChatHistory(messages) {
   try {
     if (Array.isArray(messages)) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-      window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: messages }));
+      const sanitized = messages.filter((m) => m && !isSystemPromptMessage(m));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
+      window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: sanitized }));
     }
   } catch (e) {
     console.warn("Error saving hpi_chat_history to storage:", e);
@@ -43,10 +68,11 @@ export function saveChatHistory(messages) {
  * Append one message to saved chat history and trigger update event.
  */
 export function addChatMessage(message) {
+  if (!message || isSystemPromptMessage(message)) return getChatHistory();
   const current = getChatHistory();
   // Prevent exact duplicate consecutive messages
   const last = current[current.length - 1];
-  if (last && last.role === message.role && last.content.trim() === message.content.trim()) {
+  if (last && last.role === message.role && last.content?.trim() === message.content?.trim()) {
     return current;
   }
   const next = [...current, message];
@@ -60,7 +86,9 @@ export function addChatMessage(message) {
 export function addChatMessages(newMessages) {
   if (!Array.isArray(newMessages) || newMessages.length === 0) return getChatHistory();
   const current = getChatHistory();
-  const filteredNew = newMessages.filter((nm) => nm.content && nm.content.trim());
+  const filteredNew = newMessages.filter(
+    (nm) => nm && nm.content && nm.content.trim() && !isSystemPromptMessage(nm)
+  );
   if (filteredNew.length === 0) return current;
 
   const next = [...current, ...filteredNew];
@@ -76,7 +104,7 @@ export function addChatMessages(newMessages) {
 export function subscribeChatHistory(callback) {
   const handler = (e) => {
     if (e && e.detail) {
-      callback(e.detail);
+      callback(e.detail.filter((m) => m && !isSystemPromptMessage(m)));
     } else {
       callback(getChatHistory());
     }
@@ -97,3 +125,4 @@ export function subscribeChatHistory(callback) {
 export function clearChatHistory() {
   saveChatHistory([DEFAULT_WELCOME]);
 }
+

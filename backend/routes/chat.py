@@ -506,8 +506,10 @@ async def sync_vapi_transcript(
 
     for item in body.transcripts:
         if item.role == "user" and item.content.strip():
-            processed_count += 1
             user_text = item.content.strip()
+            if "You are Hpi," in user_text or "=== HPI'S MANDATE" in user_text or "=== MEDICAL & LAB REPORT ANALYSIS ===" in user_text:
+                continue
+            processed_count += 1
             
             # Check if user text implies tracking intent
             if client and any(k in user_text.lower() for k in ["log", "ate", "workout", "sets", "reps", "bench", "squat", "water", "drink", "meal", "food", "track"]):

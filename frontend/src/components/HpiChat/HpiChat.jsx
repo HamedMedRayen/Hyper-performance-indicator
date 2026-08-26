@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Brain, X, Send, Mic, MicOff, Phone, Paperclip, Sparkles } from "lucide-react";
+import { Brain, X, Send, Mic, MicOff, Phone, Paperclip, Sparkles, Trash2 } from "lucide-react";
 import "./HpiChat.css";
 import { API_BASE_URL as API_URL } from "../../utils/config";
 import { getSyncItem } from "../../utils/storage";
 import { startListening, stopListening } from "../../utils/speechRecognition";
-import { getChatHistory, saveChatHistory, subscribeChatHistory } from "../../utils/chatStorage";
+import { getChatHistory, saveChatHistory, subscribeChatHistory, isSystemPromptMessage, clearChatHistory } from "../../utils/chatStorage";
 import VapiCallModal from "../VapiCallModal/VapiCallModal";
 import MarkdownMessage from "../common/MarkdownMessage";
 
@@ -256,6 +256,20 @@ export default function HpiChat() {
             <Phone size={18} />
           </button>
 
+          {/* Clean / Clear Conversation Button */}
+          <button
+            className="hpi-clear-header-btn"
+            onClick={() => {
+              if (window.confirm("Clear all conversation history with Hpi?")) {
+                clearChatHistory();
+              }
+            }}
+            aria-label="Clean conversation"
+            title="Clean / Clear conversation history"
+          >
+            <Trash2 size={16} />
+          </button>
+
           <button
             className="hpi-header-close"
             onClick={toggleChat}
@@ -267,7 +281,7 @@ export default function HpiChat() {
 
         {/* Messages */}
         <div className="hpi-messages">
-          {messages.map((msg, i) => (
+          {messages.filter((msg) => msg && !isSystemPromptMessage(msg)).map((msg, i) => (
             <div key={i} className={`hpi-msg ${msg.role}`}>
               <div className="hpi-msg-text">
                 <MarkdownMessage content={msg.content} role={msg.role} />
