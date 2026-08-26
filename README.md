@@ -49,8 +49,10 @@ The web app is built with **Create React App**; the same codebase is wrapped wit
 ### 1. AI Chat Coach — "Hpi"
 An agentic chat assistant that parses natural language (typed or spoken) into structured logging actions.
 - Backend: `backend/routes/chat.py` (803 lines) — `POST /api/chat`, `GET /api/vapi/config`, `POST /api/chat/sync-vapi`
-- Frontend: `frontend/src/components/HpiChat/HpiChat.jsx`
+- Frontend: `frontend/src/components/HpiChat/HpiChat.jsx`, `frontend/src/components/common/MarkdownMessage.jsx`
 - Emits a hidden `[ACTION: {...}]` block per response, parsed server-side to trigger: `log_workout`, `log_meal`, `log_water`, `log_sleep`, `log_injury`
+- **Plan Export Action Bar**: 1-click export of AI-generated routines, meal plans, and workout splits in `.md` (Markdown), `.txt` (Plain text), styled `.pdf` (Print-ready document), or **Copy to Clipboard** (`utils/fileExport.js`).
+- **Medical Report & Lab Upload**: Direct attachment support for PDFs and images for automated injury and health metric analysis.
 
 ### 2. Voice AI (Vapi Integration)
 Voice calls to the AI assistant, with spoken transcripts synced back for the same action-parsing pipeline as chat.
