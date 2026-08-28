@@ -27,8 +27,8 @@ _CLASSIFICATION_PROMPT = """You are a question classifier for a fitness/gym reco
 
 Classify the following question into EXACTLY ONE of these categories:
 
-- PERFORMANCE_ANALYSIS: Questions about BMI, weight, height, age statistics, distributions, or member metrics
-- RECOMMENDATION: Questions asking for exercise, diet, or equipment recommendations for specific profiles
+- PERFORMANCE_ANALYSIS: Questions analyzing BMI, weight, height, age statistics, distributions, or member metrics
+- RECOMMENDATION: Questions asking for a workout plan, exercise routine, diet/meal plan, or equipment recommendations
 - COMPARISON: Questions comparing groups (e.g., male vs female, diabetic vs non-diabetic, different BMI levels)
 - TREND_PROGRESS: Questions about patterns, distributions, counts, or trends across the dataset
 - ADHERENCE_BEHAVIOR: Questions about what equipment, exercises, or programs members actually use/follow
@@ -60,12 +60,16 @@ def classify_question(question: str) -> QuestionType:
                 }
             ],
             temperature=0.0,
-            max_tokens=20,
+            max_tokens=150,
         )
 
         raw = completion.choices[0].message.content.strip().upper()
         # Clean up any extra text
-        raw = raw.replace(" ", "_").split("\n")[0].strip(".")
+        raw = raw.replace(" ", "_").split("\n")[0].strip(".:*`'\"")
+
+        if not raw:
+            log.warning(f"[CLASSIFIER] Empty response from model, defaulting to RECOMMENDATION")
+            return QuestionType.RECOMMENDATION
 
         # Try to match to enum
         try:
@@ -73,9 +77,9 @@ def classify_question(question: str) -> QuestionType:
             log.info(f"[CLASSIFIER] '{question[:60]}...' → {result.value}")
             return result
         except ValueError:
-            # Try partial match
+            # Try partial match (ensure raw is non-empty)
             for qt in QuestionType:
-                if qt.value in raw or raw in qt.value:
+                if (qt.value in raw) or (len(raw) >= 4 and raw in qt.value):
                     log.info(
                         f"[CLASSIFIER] Partial match '{raw}' → {qt.value}"
                     )

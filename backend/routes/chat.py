@@ -96,7 +96,7 @@ Structure plans with clean Markdown (headers, tables, rest periods, RPE). If the
 
 def should_trigger_rag(query: str) -> bool:
     """Determine whether RAG vector search should be triggered for a user query."""
-    if not query or len(query.strip()) < 6:
+    if not query or len(query.strip()) < 4:
         return False
 
     q_lower = query.lower().strip()
@@ -105,33 +105,53 @@ def should_trigger_rag(query: str) -> bool:
     if query.startswith("[Athlete uploaded a medical"):
         return False
 
-    # 1. Skip RAG for clear data logging or tracking requests
-    logging_keywords = [
-        "log", "logged", "ate", "eating", "drink", "drank", "water", "workout",
-        "sets", "reps", "bench", "squat", "deadlift", "meal", "food", "track",
-        "tracked", "breakfast", "lunch", "dinner", "snack", "kcal", "calories",
-        "grams", "kg", "lbs"
-    ]
-    science_keywords = [
-        "why", "how does", "explain", "study", "research", "science", "article",
-        "paper", "mechanism", "optimal", "hypertrophy", "physiology", "program",
-        "recommend", "protocol"
-    ]
-
-    if any(k in q_lower for k in logging_keywords):
-        if not any(sk in q_lower for sk in science_keywords):
+    # 1. Skip RAG for simple greetings or casual conversational filler
+    greetings = ["hi", "hello", "hey", "good morning", "good evening", "thanks", "thank you", "bye", "ok", "okay", "yes", "no", "sup", "yo"]
+    if q_lower in greetings or any(q_lower.startswith(g) for g in ["hi ", "hello ", "hey ", "good morning", "good evening"]):
+        if len(q_lower.split()) <= 3:
             return False
 
-    # 2. Skip RAG for simple greetings or casual conversational filler
-    greetings = ["hi", "hello", "hey", "good morning", "good evening", "thanks", "thank you", "bye", "ok", "okay", "yes", "no"]
-    if q_lower in greetings or any(q_lower.startswith(g) for g in ["hi ", "hello ", "hey "]):
+    # 2. Skip RAG for exercise GIF / media lookup
+    if any(w in q_lower for w in ["gif", "show gif", "show me a gif", "picture of", "photo of", "image of"]):
         return False
 
-    # 3. Skip RAG for exercise GIF / media lookup
-    if any(w in q_lower for w in ["gif", "picture", "photo", "image", "show me exercise", "show gif"]):
+    # 3. Strict action / logging patterns (skip RAG when user is recording/logging data)
+    logging_indicators = [
+        "log ", "logged ", "track ", "tracked ", "record ", "recorded ",
+        "i ate ", "just ate ", "i just ate ", "i had ", "ate ",
+        "drank ", "i drank ", "just drank ", "drinking ",
+        "i did ", "just finished ", "completed workout", "logging "
+    ]
+    # If the message clearly starts with or contains a logging action and isn't asking a question
+    is_logging_action = any(li in q_lower for li in logging_indicators)
+    has_question_intent = any(w in q_lower for w in ["?", "what", "how", "why", "can you", "could you", "suggest", "recommend", "should i", "give me", "create", "build", "plan"])
+    
+    if is_logging_action and not has_question_intent:
         return False
 
-    return True
+    # Check for raw logging syntax like "3 sets of 10 reps", "bench 80kg", "500ml" without question intent
+    import re
+    if re.search(r"\b\d+\s*(sets?|reps?|kg|lbs?|ml|kcal|calories)\b", q_lower) and not has_question_intent:
+        return False
+
+    # 4. Explicit plan, recommendation, knowledge, or advice request (trigger RAG)
+    rag_intent_keywords = [
+        "plan", "routine", "diet", "meal plan", "workout plan", "split", "schedule",
+        "recommend", "recommendation", "suggest", "advice", "guide", "guidelines",
+        "why", "how", "what", "which", "explain", "study", "research", "science",
+        "article", "paper", "mechanism", "optimal", "hypertrophy", "physiology",
+        "protocol", "program", "programming", "exercises for", "workout for",
+        "training for", "tips", "best way", "give me", "create", "build", "generate",
+        "design", "structure", "macro", "macros", "protein", "carbs", "calories",
+        "deficit", "surplus", "bulk", "cut", "recomp", "cardio", "mobility", "stretch",
+        "warmup", "cooldown", "recovery", "fatigue", "progression", "form", "technique",
+        "injury", "substitute", "alternative", "frequency", "volume", "intensity"
+    ]
+    if any(k in q_lower for k in rag_intent_keywords):
+        return True
+
+    # Default to True for exploratory/consultative queries with sufficient length
+    return len(q_lower.split()) >= 3
 
 
 def build_user_hpi_context(user_id: Optional[int], db, last_user_msg: str = "") -> dict:
